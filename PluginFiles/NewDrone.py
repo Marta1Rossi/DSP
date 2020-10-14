@@ -1,0 +1,91 @@
+# -*- coding: utf-8 -*-
+
+# Form implementation generated from reading ui file 'NewDrone.ui'
+#
+# Created by: PyQt5 UI code generator 5.11.3
+#
+# WARNING! All changes made in this file will be lost!
+
+from PyQt5 import QtCore, QtGui, QtWidgets
+
+class Ui_Dialog(object):
+    def setupUi(self, Dialog):
+        Dialog.setObjectName("Dialog")
+        Dialog.resize(405, 218)
+        self.widget = QtWidgets.QWidget(Dialog)
+        self.widget.setGeometry(QtCore.QRect(90, 180, 239, 25))
+        self.widget.setObjectName("widget")
+        self.horizontalLayout = QtWidgets.QHBoxLayout(self.widget)
+        self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
+        self.horizontalLayout.setObjectName("horizontalLayout")
+        self.buttonBox = QtWidgets.QDialogButtonBox(self.widget)
+        self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
+        self.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.Cancel|QtWidgets.QDialogButtonBox.Ok)
+        self.buttonBox.setObjectName("buttonBox")
+        self.horizontalLayout.addWidget(self.buttonBox)
+        self.pushButton = QtWidgets.QPushButton(self.widget)
+        self.pushButton.setObjectName("pushButton")
+        self.horizontalLayout.addWidget(self.pushButton)
+        self.widget1 = QtWidgets.QWidget(Dialog)
+        self.widget1.setGeometry(QtCore.QRect(20, 10, 261, 22))
+        self.widget1.setObjectName("widget1")
+        self.horizontalLayout_2 = QtWidgets.QHBoxLayout(self.widget1)
+        self.horizontalLayout_2.setContentsMargins(0, 0, 0, 0)
+        self.horizontalLayout_2.setObjectName("horizontalLayout_2")
+        self.label = QtWidgets.QLabel(self.widget1)
+        self.label.setObjectName("label")
+        self.horizontalLayout_2.addWidget(self.label)
+        self.lineEdit = QtWidgets.QLineEdit(self.widget1)
+        self.lineEdit.setObjectName("lineEdit")
+        self.horizontalLayout_2.addWidget(self.lineEdit)
+        self.widget2 = QtWidgets.QWidget(Dialog)
+        self.widget2.setGeometry(QtCore.QRect(20, 50, 144, 22))
+        self.widget2.setObjectName("widget2")
+        self.horizontalLayout_3 = QtWidgets.QHBoxLayout(self.widget2)
+        self.horizontalLayout_3.setContentsMargins(0, 0, 0, 0)
+        self.horizontalLayout_3.setObjectName("horizontalLayout_3")
+        self.label_2 = QtWidgets.QLabel(self.widget2)
+        self.label_2.setObjectName("label_2")
+        self.horizontalLayout_3.addWidget(self.label_2)
+        self.doubleSpinBox_3 = QtWidgets.QDoubleSpinBox(self.widget2)
+        self.doubleSpinBox_3.setObjectName("doubleSpinBox_3")
+        self.horizontalLayout_3.addWidget(self.doubleSpinBox_3)
+        self.widget3 = QtWidgets.QWidget(Dialog)
+        self.widget3.setGeometry(QtCore.QRect(20, 90, 176, 22))
+        self.widget3.setObjectName("widget3")
+        self.horizontalLayout_4 = QtWidgets.QHBoxLayout(self.widget3)
+        self.horizontalLayout_4.setContentsMargins(0, 0, 0, 0)
+        self.horizontalLayout_4.setObjectName("horizontalLayout_4")
+        self.label_3 = QtWidgets.QLabel(self.widget3)
+        self.label_3.setObjectName("label_3")
+        self.horizontalLayout_4.addWidget(self.label_3)
+        self.doubleSpinBox = QtWidgets.QDoubleSpinBox(self.widget3)
+        self.doubleSpinBox.setObjectName("doubleSpinBox")
+        self.horizontalLayout_4.addWidget(self.doubleSpinBox)
+        self.widget4 = QtWidgets.QWidget(Dialog)
+        self.widget4.setGeometry(QtCore.QRect(20, 130, 168, 22))
+        self.widget4.setObjectName("widget4")
+        self.horizontalLayout_5 = QtWidgets.QHBoxLayout(self.widget4)
+        self.horizontalLayout_5.setContentsMargins(0, 0, 0, 0)
+        self.horizontalLayout_5.setObjectName("horizontalLayout_5")
+        self.label_4 = QtWidgets.QLabel(self.widget4)
+        self.label_4.setObjectName("label_4")
+        self.horizontalLayout_5.addWidget(self.label_4)
+        self.doubleSpinBox_2 = QtWidgets.QDoubleSpinBox(self.widget4)
+        self.doubleSpinBox_2.setObjectName("doubleSpinBox_2")
+        self.horizontalLayout_5.addWidget(self.doubleSpinBox_2)
+
+        self.retranslateUi(Dialog)
+        self.buttonBox.accepted.connect(Dialog.accept)
+        self.buttonBox.rejected.connect(Dialog.reject)
+        QtCore.QMetaObject.connectSlotsByName(Dialog)
+
+    def retranslateUi(self, Dialog):
+        _translate = QtCore.QCoreApplication.translate
+        Dialog.setWindowTitle(_translate("Dialog", "Dialog"))
+        self.pushButton.setText(_translate("Dialog", "Help"))
+        self.label.setText(_translate("Dialog", "Drone Type"))
+        self.label_2.setText(_translate("Dialog", "Max. Altitude [m]"))
+        self.label_3.setText(_translate("Dialog", "UAS Max. Speed [Km/h]"))
+        self.label_4.setText(_translate("Dialog", "Battery Duration [min]"))
+

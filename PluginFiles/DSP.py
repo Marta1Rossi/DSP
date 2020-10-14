@@ -32,11 +32,24 @@ from .resources import *
 
 # Import the code for the dialog
 from .DSP_dialog import DroneSurveyingPlanningDialog
+from .NewDrone import Ui_Dialog as drone
+from .NewSensor import Ui_Dialog as sensor
 import os.path
 
-class NewDialog(QtWidgets.QDialog):
-  def __init__(self, parent):
-    super(NewDialog, self).__init__(parent)
+
+class DroneDialog(QtWidgets.QDialog):
+    def __init__(self, parent):
+        super(DroneDialog, self).__init__(parent)
+        self.ui = drone()
+        self.ui.setupUi(self)
+
+
+class SensorDialog(QtWidgets.QDialog):
+    def __init__(self, parent):
+        super(SensorDialog, self).__init__(parent)
+        self.ui = sensor()
+        self.ui.setupUi(self)
+
 
 class DroneSurveyingPlanning:
     """QGIS Plugin Implementation."""
@@ -183,7 +196,9 @@ class DroneSurveyingPlanning:
         self.first_start = True
         self.dlg.tb_invector.clicked.connect(self.openVector)
         self.dlg.tb_inDTM.clicked.connect(self.openDTM)
-        self.dlg.pb_drone.clicked.connect(self.open_new_dialog)
+        self.dlg.pb_drone.clicked.connect(self.open_drone_dialog)
+        self.dlg.pb_sensor.clicked.connect(self.open_sensor_dialog)
+        #self.dlg.close_button.clicked.connect(self.dlg.accept)
        
 
     def loadVectors(self):
@@ -222,9 +237,13 @@ class DroneSurveyingPlanning:
             self.iface.addRasterLayer(inFile, str.split(os.path.basename(inFile), ".")[0])
             self.loadDTM()
 
-    def open_new_dialog(self):
-        self.nd = NewDialog(self)
-        self.nd.show()
+    def open_drone_dialog(self):
+        nd = DroneDialog(parent=self.dlg)
+        nd.show()
+
+    def open_sensor_dialog(self):
+        nd = SensorDialog(parent=self.dlg)
+        nd.show()
 
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
