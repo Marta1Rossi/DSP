@@ -198,8 +198,8 @@ class DroneSurveyingPlanning:
         self.dlg.tb_inDTM.clicked.connect(self.openDTM)
         self.dlg.pb_drone.clicked.connect(self.open_drone_dialog)
         self.dlg.pb_sensor.clicked.connect(self.open_sensor_dialog)
-        #self.dlg.close_button.clicked.connect(self.dlg.accept)
-       
+        self.dlg.close_button.clicked.connect(self.dlg.close)
+
 
     def loadVectors(self):
         """Load vectors from QGIS table of contents"""

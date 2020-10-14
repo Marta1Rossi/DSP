@@ -682,7 +682,7 @@
      </widget>
     </item>
     <item>
-     <widget class="QPushButton" name="pushButton_3">
+     <widget class="QPushButton" name="close_button">
       <property name="font">
        <font>
         <weight>50</weight>
