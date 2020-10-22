@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>405</width>
-    <height>218</height>
+    <width>339</width>
+    <height>230</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -16,37 +16,8 @@
   <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
-     <x>90</x>
-     <y>180</y>
-     <width>239</width>
-     <height>25</height>
-    </rect>
-   </property>
-   <layout class="QHBoxLayout" name="horizontalLayout">
-    <item>
-     <widget class="QDialogButtonBox" name="buttonBox">
-      <property name="orientation">
-       <enum>Qt::Horizontal</enum>
-      </property>
-      <property name="standardButtons">
-       <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QPushButton" name="pushButton">
-      <property name="text">
-       <string>Help</string>
-      </property>
-     </widget>
-    </item>
-   </layout>
-  </widget>
-  <widget class="QWidget" name="layoutWidget">
-   <property name="geometry">
-    <rect>
      <x>20</x>
-     <y>10</y>
+     <y>20</y>
      <width>261</width>
      <height>22</height>
     </rect>
@@ -55,12 +26,12 @@
     <item>
      <widget class="QLabel" name="label">
       <property name="text">
-       <string>Drone Type</string>
+       <string>Drone Name:</string>
       </property>
      </widget>
     </item>
     <item>
-     <widget class="QLineEdit" name="lineEdit"/>
+     <widget class="QLineEdit" name="i_name"/>
     </item>
    </layout>
   </widget>
@@ -68,8 +39,8 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>50</y>
-     <width>144</width>
+     <y>60</y>
+     <width>211</width>
      <height>22</height>
     </rect>
    </property>
@@ -77,12 +48,25 @@
     <item>
      <widget class="QLabel" name="label_2">
       <property name="text">
-       <string>Max. Altitude [m]</string>
+       <string>Max. Altitude [m]:</string>
       </property>
      </widget>
     </item>
     <item>
-     <widget class="QDoubleSpinBox" name="doubleSpinBox_3"/>
+     <spacer name="horizontalSpacer_3">
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>40</width>
+        <height>20</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
+    <item>
+     <widget class="QDoubleSpinBox" name="sb_altitude"/>
     </item>
    </layout>
   </widget>
@@ -90,8 +74,8 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>90</y>
-     <width>176</width>
+     <y>100</y>
+     <width>211</width>
      <height>22</height>
     </rect>
    </property>
@@ -99,12 +83,25 @@
     <item>
      <widget class="QLabel" name="label_3">
       <property name="text">
-       <string>UAS Max. Speed [Km/h]</string>
+       <string>UAS Max. Speed [Km/h:]</string>
       </property>
      </widget>
     </item>
     <item>
-     <widget class="QDoubleSpinBox" name="doubleSpinBox"/>
+     <spacer name="horizontalSpacer_2">
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>40</width>
+        <height>20</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
+    <item>
+     <widget class="QDoubleSpinBox" name="sb_speed"/>
     </item>
    </layout>
   </widget>
@@ -112,8 +109,8 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>130</y>
-     <width>168</width>
+     <y>140</y>
+     <width>211</width>
      <height>22</height>
     </rect>
    </property>
@@ -121,49 +118,55 @@
     <item>
      <widget class="QLabel" name="label_4">
       <property name="text">
-       <string>Battery Duration [min]</string>
+       <string>Battery Duration [min]:</string>
       </property>
      </widget>
     </item>
     <item>
-     <widget class="QDoubleSpinBox" name="doubleSpinBox_2"/>
+     <spacer name="horizontalSpacer">
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>40</width>
+        <height>20</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
+    <item>
+     <widget class="QDoubleSpinBox" name="sb_battery"/>
     </item>
    </layout>
   </widget>
+  <widget class="QPushButton" name="pb_okdrone">
+   <property name="geometry">
+    <rect>
+     <x>90</x>
+     <y>190</y>
+     <width>75</width>
+     <height>23</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>OK</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="pb_close">
+   <property name="geometry">
+    <rect>
+     <x>180</x>
+     <y>190</y>
+     <width>75</width>
+     <height>23</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Cancel</string>
+   </property>
+  </widget>
  </widget>
  <resources/>
- <connections>
-  <connection>
-   <sender>buttonBox</sender>
-   <signal>accepted()</signal>
-   <receiver>Dialog</receiver>
-   <slot>accept()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>248</x>
-     <y>254</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>157</x>
-     <y>274</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>buttonBox</sender>
-   <signal>rejected()</signal>
-   <receiver>Dialog</receiver>
-   <slot>reject()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>316</x>
-     <y>260</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>286</x>
-     <y>274</y>
-    </hint>
-   </hints>
-  </connection>
- </connections>
+ <connections/>
 </ui>

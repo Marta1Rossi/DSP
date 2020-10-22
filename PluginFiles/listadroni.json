@@ -1,0 +1,22 @@
+{
+   "DroneList": [
+	{
+	 	"DroneName": "Pioneer",
+    		"MaxAltitude": 40,
+    		"MaxSpeed": 30,
+    		"Battery": "50" },
+
+	{	
+	 	"DroneName": "Marco",
+    		"MaxAltitude": 30,
+    		"MaxSpeed": 20,
+    		"Battery": "40" },
+	 	
+	{	"DroneName": "Marta",
+    		"MaxAltitude": 20,
+    		"MaxSpeed": 30,
+    		"Battery": "45"}
+
+		]
+}
+   

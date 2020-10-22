@@ -21,28 +21,30 @@
  *                                                                         *
  ***************************************************************************/
 """
+import json
+import os.path
+
+
+from qgis.PyQt import QtWidgets
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
 from qgis.PyQt.QtGui import *
 from qgis.PyQt.QtWidgets import QAction, QFileDialog
 from qgis.core import *
-from qgis.PyQt import QtWidgets
 
-# Initialize Qt resources from file resources.py
-from .resources import *
-
+from .DSP_HELP import Ui_Dialog as DSPHELP
 # Import the code for the dialog
 from .DSP_dialog import DroneSurveyingPlanningDialog
 from .NewDrone import Ui_Dialog as drone
 from .NewSensor import Ui_Dialog as sensor
-import os.path
 
 
+
+#define new dialog windows
 class DroneDialog(QtWidgets.QDialog):
     def __init__(self, parent):
         super(DroneDialog, self).__init__(parent)
         self.ui = drone()
         self.ui.setupUi(self)
-
 
 class SensorDialog(QtWidgets.QDialog):
     def __init__(self, parent):
@@ -50,7 +52,14 @@ class SensorDialog(QtWidgets.QDialog):
         self.ui = sensor()
         self.ui.setupUi(self)
 
+class DSPHELPDialog(QtWidgets.QDialog):
+    def __init__(self, parent):
+        super(DSPHELPDialog, self).__init__(parent)
+        self.ui = DSPHELP()
+        self.ui.setupUi(self)
 
+
+# Initialize Qt resources from file resources.py
 class DroneSurveyingPlanning:
     """QGIS Plugin Implementation."""
 
@@ -78,9 +87,16 @@ class DroneSurveyingPlanning:
             self.translator.load(locale_path)
             QCoreApplication.installTranslator(self.translator)
 
+        #
+        drone_file = open(os.path.join(self.plugin_dir, 'listadroni.json'))
+        self.drone_list = json.load(drone_file)['DroneList']
+
+        sensor_file = open(os.path.join(self.plugin_dir, 'listasensori.json'))
+        self.sensor_list = json.load(sensor_file)['SensorList']
+
+
         # Create the dialog (after translation) and keep reference
         self.dlg = DroneSurveyingPlanningDialog()
-
 
 
         # Declare instance attributes
@@ -193,13 +209,36 @@ class DroneSurveyingPlanning:
             parent=self.iface.mainWindow())
 
         # will be set False in run()
+        self.loadDrone()
+        self.loadSensor()
         self.first_start = True
         self.dlg.tb_invector.clicked.connect(self.openVector)
         self.dlg.tb_inDTM.clicked.connect(self.openDTM)
         self.dlg.pb_drone.clicked.connect(self.open_drone_dialog)
         self.dlg.pb_sensor.clicked.connect(self.open_sensor_dialog)
+        #self.dlg.pb_run.clicked.connect(self.start_simulation)
+        self.dlg.HelpPushButton.clicked.connect(self.open_DSPHELP_dialog)
         self.dlg.close_button.clicked.connect(self.dlg.close)
 
+    def loadDrone(self):
+        """Add the created new drone to the list of drones in main DSP dialog"""
+        self.dlg.cb_drone.clear()
+
+        drone_combobox = []
+        for drone in self.drone_list:
+            drone_combobox.append(drone['DroneName'])
+
+        self.dlg.cb_drone.addItems(drone_combobox)
+
+    def loadSensor(self):
+        """Add the created new sensor to the list of sensors in main DSP dialog"""
+        self.dlg.cb_sensor.clear()
+
+        sensor_combobox = []
+        for sensor in self.sensor_list:
+            sensor_combobox.append(sensor['SensorName'])
+
+        self.dlg.cb_sensor.addItems(sensor_combobox)
 
     def loadVectors(self):
         """Load vectors from QGIS table of contents"""
@@ -238,11 +277,48 @@ class DroneSurveyingPlanning:
             self.loadDTM()
 
     def open_drone_dialog(self):
-        nd = DroneDialog(parent=self.dlg)
-        nd.show()
+        """Open dialog to create a new drone"""
+        self.droneDialog = DroneDialog(parent=self.dlg)
+        self.droneDialog.ui.pb_okdrone.clicked.connect(self.collect_drone)
+        self.droneDialog.ui.pb_close.clicked.connect(self.droneDialog.close)
+        self.droneDialog.show()
+
+    def collect_drone(self):
+        """Collect the new drone attributes """
+        new_drone = dict()
+        new_drone['DroneName'] = self.droneDialog.ui.i_name.text()
+        new_drone['MaxAltitude'] = self.droneDialog.ui.sb_altitude.value()
+        new_drone['MaxSpeed'] = self.droneDialog.ui.sb_speed.value()
+        new_drone['Battery'] = self.droneDialog.ui.sb_battery.value()
+        self.drone_list.append(new_drone)
+        self.loadDrone()
+        self.droneDialog.close()
+
 
     def open_sensor_dialog(self):
-        nd = SensorDialog(parent=self.dlg)
+        """Open dialog to create a new drone"""
+        self.sensorDialog = SensorDialog(parent=self.dlg)
+        self.sensorDialog.ui.pb_oksensor.clicked.connect(self.collect_sensor)
+        self.sensorDialog.ui.pb_close.clicked.connect(self.sensorDialog.close)
+        self.sensorDialog.show()
+
+    def collect_sensor(self):
+        """Collect the new sensor attributes """
+        new_sensor = dict()
+        new_sensor['SensorName'] = self.sensorDialog.ui.i_name.text()
+        new_sensor['FocalLenght'] = self.sensorDialog.ui.sb_fl.value()
+        new_sensor['ShootInterval'] = self.sensorDialog.ui.sb_si.value()
+        new_sensor['SizeX'] = self.sensorDialog.ui.sb_sizex.value()
+        new_sensor['SizeY'] = self.sensorDialog.ui.sb_sizey.value()
+        new_sensor['ImgSizeX'] = self.sensorDialog.ui.sb_imgsizex.value()
+        new_sensor['ImgSizeY'] = self.sensorDialog.ui.sb_imgsizey.value()
+        self.sensor_list.append(new_sensor)
+        self.loadSensor()
+        self.sensorDialog.close()
+
+    def open_DSPHELP_dialog(self):
+        """Opens the HELP dialog containing a description of plugin fields"""
+        nd = DSPHELPDialog(parent=self.dlg)
         nd.show()
 
     def unload(self):
@@ -254,6 +330,27 @@ class DroneSurveyingPlanning:
             self.iface.removeToolBarIcon(action)
 
 
+    def find_dict_in_list(self, list_, key_name, key_value):
+        for i in list_:
+            if i[key_name] == key_value:
+                return i
+        return list_[0]
+    '''
+    def start_simulation(self):
+        
+        #prende il drone che ti serve
+        selected_drone = self.find_dict_in_list(list_ = self.drone_list,
+                               key_name='DroneName',
+                               key_value=''#recupera valore da tendina)
+
+        #prende il sensore che ti serve
+        selected_sensor = self.find_dict_in_list(list_ = self.sensor_list,
+                               key_name='SensorName',
+                               key_value=''#recupera valore da tendina)
+
+        #fa il resto
+        #run_
+    '''
     def run(self):
         """Run method that performs all the real work"""
 

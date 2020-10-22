@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>433</width>
-    <height>316</height>
+    <width>431</width>
+    <height>318</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -448,7 +448,7 @@
      <rect>
       <x>10</x>
       <y>20</y>
-      <width>163</width>
+      <width>173</width>
       <height>22</height>
      </rect>
     </property>
@@ -456,12 +456,25 @@
      <item>
       <widget class="QLabel" name="label_6">
        <property name="text">
-        <string>Sensor Size in X [mm]</string>
+        <string>Sensor Size in X [mm]:</string>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QDoubleSpinBox" name="doubleSpinBox_3"/>
+      <spacer name="horizontalSpacer_2">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QDoubleSpinBox" name="sb_sizex"/>
      </item>
     </layout>
    </widget>
@@ -470,7 +483,7 @@
      <rect>
       <x>210</x>
       <y>20</y>
-      <width>163</width>
+      <width>173</width>
       <height>22</height>
      </rect>
     </property>
@@ -478,12 +491,25 @@
      <item>
       <widget class="QLabel" name="label_7">
        <property name="text">
-        <string>Sensor Size in Y [mm]</string>
+        <string>Sensor Size in Y [mm]:</string>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QDoubleSpinBox" name="doubleSpinBox_5"/>
+      <spacer name="horizontalSpacer_4">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QDoubleSpinBox" name="sb_sizey"/>
      </item>
     </layout>
    </widget>
@@ -505,7 +531,7 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>170</y>
+     <y>180</y>
      <width>91</width>
      <height>16</height>
     </rect>
@@ -518,7 +544,7 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>190</y>
+     <y>200</y>
      <width>391</width>
      <height>61</height>
     </rect>
@@ -534,7 +560,7 @@
      <rect>
       <x>10</x>
       <y>20</y>
-      <width>163</width>
+      <width>173</width>
       <height>22</height>
      </rect>
     </property>
@@ -542,12 +568,25 @@
      <item>
       <widget class="QLabel" name="label_8">
        <property name="text">
-        <string>Sensor Size in X [mm]</string>
+        <string>Image Size in X [mm]:</string>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QDoubleSpinBox" name="doubleSpinBox_6"/>
+      <spacer name="horizontalSpacer_3">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QDoubleSpinBox" name="sb_imgsizex"/>
      </item>
     </layout>
    </widget>
@@ -556,7 +595,7 @@
      <rect>
       <x>210</x>
       <y>20</y>
-      <width>163</width>
+      <width>173</width>
       <height>22</height>
      </rect>
     </property>
@@ -564,82 +603,28 @@
      <item>
       <widget class="QLabel" name="label_10">
        <property name="text">
-        <string>Sensor Size in Y [mm]</string>
+        <string>Image Size in Y [mm]:</string>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QDoubleSpinBox" name="doubleSpinBox_8"/>
+      <spacer name="horizontalSpacer_5">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QDoubleSpinBox" name="sb_imgsizey"/>
      </item>
     </layout>
    </widget>
-   <widget class="QFrame" name="frame_4">
-    <property name="geometry">
-     <rect>
-      <x>190</x>
-      <y>50</y>
-      <width>391</width>
-      <height>61</height>
-     </rect>
-    </property>
-    <property name="frameShape">
-     <enum>QFrame::StyledPanel</enum>
-    </property>
-    <property name="frameShadow">
-     <enum>QFrame::Raised</enum>
-    </property>
-    <widget class="QWidget" name="layoutWidget_4">
-     <property name="geometry">
-      <rect>
-       <x>210</x>
-       <y>20</y>
-       <width>163</width>
-       <height>22</height>
-      </rect>
-     </property>
-     <layout class="QHBoxLayout" name="horizontalLayout_11">
-      <item>
-       <widget class="QLabel" name="label_11">
-        <property name="text">
-         <string>Sensor Size in Y [mm]</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QDoubleSpinBox" name="doubleSpinBox_9"/>
-      </item>
-     </layout>
-    </widget>
-   </widget>
-  </widget>
-  <widget class="QWidget" name="layoutWidget">
-   <property name="geometry">
-    <rect>
-     <x>100</x>
-     <y>270</y>
-     <width>239</width>
-     <height>25</height>
-    </rect>
-   </property>
-   <layout class="QHBoxLayout" name="horizontalLayout">
-    <item>
-     <widget class="QDialogButtonBox" name="buttonBox">
-      <property name="orientation">
-       <enum>Qt::Horizontal</enum>
-      </property>
-      <property name="standardButtons">
-       <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QPushButton" name="pushButton">
-      <property name="text">
-       <string>Helpl</string>
-      </property>
-     </widget>
-    </item>
-   </layout>
   </widget>
   <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
@@ -654,12 +639,12 @@
     <item>
      <widget class="QLabel" name="label">
       <property name="text">
-       <string>Sensor Type</string>
+       <string>Sensor Name:</string>
       </property>
      </widget>
     </item>
     <item>
-     <widget class="QLineEdit" name="lineEdit"/>
+     <widget class="QLineEdit" name="i_name"/>
     </item>
    </layout>
   </widget>
@@ -668,7 +653,7 @@
     <rect>
      <x>20</x>
      <y>60</y>
-     <width>151</width>
+     <width>181</width>
      <height>22</height>
     </rect>
    </property>
@@ -676,12 +661,25 @@
     <item>
      <widget class="QLabel" name="label_2">
       <property name="text">
-       <string>Focal Lenght [mm]</string>
+       <string>Focal Lenght [mm]:</string>
       </property>
      </widget>
     </item>
     <item>
-     <widget class="QDoubleSpinBox" name="doubleSpinBox"/>
+     <spacer name="horizontalSpacer">
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>40</width>
+        <height>20</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
+    <item>
+     <widget class="QDoubleSpinBox" name="sb_fl"/>
     </item>
    </layout>
   </widget>
@@ -690,7 +688,7 @@
     <rect>
      <x>230</x>
      <y>60</y>
-     <width>160</width>
+     <width>170</width>
      <height>22</height>
     </rect>
    </property>
@@ -698,49 +696,55 @@
     <item>
      <widget class="QLabel" name="label_4">
       <property name="text">
-       <string>Shooting Interval [s]</string>
+       <string>Shooting Interval [s]:</string>
       </property>
      </widget>
     </item>
     <item>
-     <widget class="QDoubleSpinBox" name="doubleSpinBox_2"/>
+     <spacer name="horizontalSpacer_6">
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>40</width>
+        <height>20</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
+    <item>
+     <widget class="QDoubleSpinBox" name="sb_si"/>
     </item>
    </layout>
   </widget>
+  <widget class="QPushButton" name="pb_oksensor">
+   <property name="geometry">
+    <rect>
+     <x>130</x>
+     <y>280</y>
+     <width>75</width>
+     <height>23</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>OK</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="pb_close">
+   <property name="geometry">
+    <rect>
+     <x>220</x>
+     <y>280</y>
+     <width>75</width>
+     <height>23</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Cancel</string>
+   </property>
+  </widget>
  </widget>
  <resources/>
- <connections>
-  <connection>
-   <sender>buttonBox</sender>
-   <signal>accepted()</signal>
-   <receiver>Dialog</receiver>
-   <slot>accept()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>248</x>
-     <y>254</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>157</x>
-     <y>274</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>buttonBox</sender>
-   <signal>rejected()</signal>
-   <receiver>Dialog</receiver>
-   <slot>reject()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>316</x>
-     <y>260</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>286</x>
-     <y>274</y>
-    </hint>
-   </hints>
-  </connection>
- </connections>
+ <connections/>
 </ui>
