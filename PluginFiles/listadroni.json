@@ -7,12 +7,12 @@
     		"Battery": "50" },
 
 	{	
-	 	"DroneName": "Marco",
+	 	"DroneName": "Grey Eagle",
     		"MaxAltitude": 30,
     		"MaxSpeed": 20,
     		"Battery": "40" },
 	 	
-	{	"DroneName": "Marta",
+	{	"DroneName": "Sentinel",
     		"MaxAltitude": 20,
     		"MaxSpeed": 30,
     		"Battery": "45"}
