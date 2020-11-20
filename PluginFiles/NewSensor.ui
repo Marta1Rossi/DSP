@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>431</width>
-    <height>318</height>
+    <height>317</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -537,7 +537,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>Image Size [mm]</string>
+    <string>Image Size [pixel]</string>
    </property>
   </widget>
   <widget class="QFrame" name="frame_3">
@@ -560,7 +560,7 @@
      <rect>
       <x>10</x>
       <y>20</y>
-      <width>173</width>
+      <width>181</width>
       <height>22</height>
      </rect>
     </property>
@@ -568,7 +568,7 @@
      <item>
       <widget class="QLabel" name="label_8">
        <property name="text">
-        <string>Image Size in X [mm]:</string>
+        <string>Image Size in X [pixels]:</string>
        </property>
       </widget>
      </item>
@@ -595,7 +595,7 @@
      <rect>
       <x>210</x>
       <y>20</y>
-      <width>173</width>
+      <width>181</width>
       <height>22</height>
      </rect>
     </property>
@@ -603,7 +603,7 @@
      <item>
       <widget class="QLabel" name="label_10">
        <property name="text">
-        <string>Image Size in Y [mm]:</string>
+        <string>Image Size in Y [pixels]:</string>
        </property>
       </widget>
      </item>
