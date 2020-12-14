@@ -17,10 +17,10 @@
   </component>
   <component name="PropertiesComponent">
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/test_planning.py" />
   </component>
-  <component name="RunManager" selected="Python.test">
-    <configuration name="DSP" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+  <component name="RunManager" selected="Python.Planning">
+    <configuration name="DSP" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
       <module name="DSP" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -33,6 +33,27 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/PluginFiles/DSP.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="Planning" type="PythonConfigurationType" factoryName="Python">
+      <module name="DSP" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="C:\OSGeo4W64\bin\python-qgis.bat" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test_planning.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -62,10 +83,14 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <list>
+      <item itemvalue="Python.Planning" />
+      <item itemvalue="Python.DSP" />
+      <item itemvalue="Python.test" />
+    </list>
     <recent_temporary>
       <list>
         <item itemvalue="Python.test" />
-        <item itemvalue="Python.DSP" />
       </list>
     </recent_temporary>
   </component>
@@ -81,25 +106,33 @@
     <servers />
   </component>
   <component name="WindowStateProjectService">
+    <state x="115" y="0" width="1092" height="728" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1607947329937">
+      <screen x="0" y="0" width="1366" height="728" />
+    </state>
+    <state x="115" y="0" width="1092" height="728" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.0.1366.728@0.0.1366.728" timestamp="1607947329937" />
     <state x="413" y="111" key="#com.intellij.refactoring.safeDelete.UnsafeUsagesDialog" timestamp="1602685121332">
       <screen x="0" y="0" width="1366" height="728" />
     </state>
     <state x="413" y="111" key="#com.intellij.refactoring.safeDelete.UnsafeUsagesDialog/0.0.1366.728@0.0.1366.728" timestamp="1602685121332" />
-    <state width="1345" height="176" key="GridCell.Tab.0.bottom" timestamp="1603377862531">
+    <state x="463" y="119" key="FileChooserDialogImpl" timestamp="1607947329014">
       <screen x="0" y="0" width="1366" height="728" />
     </state>
-    <state width="1345" height="176" key="GridCell.Tab.0.bottom/0.0.1366.728@0.0.1366.728" timestamp="1603377862531" />
-    <state width="1345" height="176" key="GridCell.Tab.0.center" timestamp="1603377862531">
+    <state x="463" y="119" key="FileChooserDialogImpl/0.0.1366.728@0.0.1366.728" timestamp="1607947329014" />
+    <state width="723" height="562" key="GridCell.Tab.0.bottom" timestamp="1607950169714">
       <screen x="0" y="0" width="1366" height="728" />
     </state>
-    <state width="1345" height="176" key="GridCell.Tab.0.center/0.0.1366.728@0.0.1366.728" timestamp="1603377862531" />
-    <state width="1345" height="176" key="GridCell.Tab.0.left" timestamp="1603377862531">
+    <state width="723" height="562" key="GridCell.Tab.0.bottom/0.0.1366.728@0.0.1366.728" timestamp="1607950169714" />
+    <state width="723" height="562" key="GridCell.Tab.0.center" timestamp="1607950169714">
       <screen x="0" y="0" width="1366" height="728" />
     </state>
-    <state width="1345" height="176" key="GridCell.Tab.0.left/0.0.1366.728@0.0.1366.728" timestamp="1603377862531" />
-    <state width="1345" height="176" key="GridCell.Tab.0.right" timestamp="1603377862531">
+    <state width="723" height="562" key="GridCell.Tab.0.center/0.0.1366.728@0.0.1366.728" timestamp="1607950169714" />
+    <state width="723" height="562" key="GridCell.Tab.0.left" timestamp="1607950169714">
       <screen x="0" y="0" width="1366" height="728" />
     </state>
-    <state width="1345" height="176" key="GridCell.Tab.0.right/0.0.1366.728@0.0.1366.728" timestamp="1603377862531" />
+    <state width="723" height="562" key="GridCell.Tab.0.left/0.0.1366.728@0.0.1366.728" timestamp="1607950169714" />
+    <state width="723" height="562" key="GridCell.Tab.0.right" timestamp="1607950169714">
+      <screen x="0" y="0" width="1366" height="728" />
+    </state>
+    <state width="723" height="562" key="GridCell.Tab.0.right/0.0.1366.728@0.0.1366.728" timestamp="1607950169714" />
   </component>
 </project>
