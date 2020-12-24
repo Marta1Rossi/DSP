@@ -32,10 +32,12 @@ from qgis.PyQt.QtWidgets import QAction, QFileDialog
 from qgis.core import *
 
 from .DSP_HELP import Ui_Dialog as DSPHELP
+from .DSP_outputs import Ui_Dialog as DSPoutputs
 # Import the code for the dialog
 from .DSP_dialog import DroneSurveyingPlanningDialog
 from .NewDrone import Ui_Dialog as drone
 from .NewSensor import Ui_Dialog as sensor
+from .normal_case import normal_case
 
 
 
@@ -58,6 +60,11 @@ class DSPHELPDialog(QtWidgets.QDialog):
         self.ui = DSPHELP()
         self.ui.setupUi(self)
 
+class DSPoutputsDialog(QtWidgets.QDialog):
+    def __init__(self, parent):
+        super(DSPoutputsDialog, self).__init__(parent)
+        self.ui = DSPoutputs()
+        self.ui.setupUi(self)
 
 # Initialize Qt resources from file resources.py
 class DroneSurveyingPlanning:
@@ -216,7 +223,7 @@ class DroneSurveyingPlanning:
         self.dlg.tb_inDTM.clicked.connect(self.openDTM)
         self.dlg.pb_drone.clicked.connect(self.open_drone_dialog)
         self.dlg.pb_sensor.clicked.connect(self.open_sensor_dialog)
-        #self.dlg.pb_run.clicked.connect(self.start_simulation)
+        self.dlg.RUN.clicked.connect(self.run_function)
         self.dlg.HelpPushButton.clicked.connect(self.open_DSPHELP_dialog)
         self.dlg.close_button.clicked.connect(self.dlg.close)
 
@@ -306,7 +313,7 @@ class DroneSurveyingPlanning:
         """Collect the new sensor attributes """
         new_sensor = dict()
         new_sensor['SensorName'] = self.sensorDialog.ui.i_name.text()
-        new_sensor['FocalLenght'] = self.sensorDialog.ui.sb_fl.value()
+        new_sensor['FocalLength'] = self.sensorDialog.ui.sb_fl.value()
         new_sensor['ShootInterval'] = self.sensorDialog.ui.sb_si.value()
         new_sensor['SizeX'] = self.sensorDialog.ui.sb_sizex.value()
         new_sensor['SizeY'] = self.sensorDialog.ui.sb_sizey.value()
@@ -321,6 +328,11 @@ class DroneSurveyingPlanning:
         nd = DSPHELPDialog(parent=self.dlg)
         nd.show()
 
+    def open_DSPoutputs_dialog(self):
+        """Opens an outputs dialog containing the computed results"""
+        nd = DSPoutputsDialog(parent=self.dlg)
+        nd.show()
+
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
         for action in self.actions:
@@ -328,7 +340,6 @@ class DroneSurveyingPlanning:
                 self.tr(u'&DSP'),
                 action)
             self.iface.removeToolBarIcon(action)
-
 
     def find_dict_in_list(self, list_, key_name, key_value):
         for i in list_:
@@ -351,6 +362,31 @@ class DroneSurveyingPlanning:
         #fa il resto
         #run_
     '''
+
+    def run_function(self):
+        drone = self.find_dict_in_list(list_=self.drone_list,
+                                       key_name='DroneName',
+                                       key_value=self.dlg.cb_drone)
+        sensor = self.find_dict_in_list(list_=self.sensor_list,
+                                        key_name='SensorName',
+                                        key_value=self.dlg.cb_sensor)
+        X = self.dlg.Xdim.value()
+        Y = self.dlg.Ydim.value()
+        if self.dlg.Manual:
+            h = self.dlg.h.value()
+            Rl = self.dlg.Rl.value() / 100
+            Rt = self.dlg.Rt.value() / 100
+        elif self.dlg.auto:
+            pass
+            # TODO
+        else:
+            raise AttributeError
+        scoll = self.dlg.scoll.value()
+
+        outputs_all, outputs_along_track = normal_case(drone, sensor, X, Y, h, Rl, Rt, scoll)
+        self.open_DSPoutputs_dialog()
+
+
     def run(self):
         """Run method that performs all the real work"""
 
