@@ -24,12 +24,12 @@
 import json
 import os.path
 
-
 from qgis.PyQt import QtWidgets
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
 from qgis.PyQt.QtGui import *
 from qgis.PyQt.QtWidgets import QAction, QFileDialog
 from qgis.core import *
+import numpy as np
 
 from .DSP_HELP import Ui_Dialog as DSPHELP
 from .DSP_outputs import Ui_Dialog as DSPoutputs
@@ -37,7 +37,7 @@ from .DSP_outputs import Ui_Dialog as DSPoutputs
 from .DSP_dialog import DroneSurveyingPlanningDialog
 from .NewDrone import Ui_Dialog as drone
 from .NewSensor import Ui_Dialog as sensor
-from .normal_case import normal_case
+from .survey_planning import NormalCaseMethod, SimulationMethod
 
 
 
@@ -325,13 +325,40 @@ class DroneSurveyingPlanning:
 
     def open_DSPHELP_dialog(self):
         """Opens the HELP dialog containing a description of plugin fields"""
-        nd = DSPHELPDialog(parent=self.dlg)
-        nd.show()
+        dsp_help = DSPHELPDialog(parent=self.dlg)
+        dsp_help.show()
+
+    def overlap_map(self):
+        """plots the overlapping map of our method"""
+        self.method.plot_overlapping()
+
+    def error_map(self):
+        """Opens the HELP dialog containing a description of plugin fields"""
+        self.method.plot_error()
 
     def open_DSPoutputs_dialog(self):
         """Opens an outputs dialog containing the computed results"""
-        nd = DSPoutputsDialog(parent=self.dlg)
-        nd.show()
+        outputs = DSPoutputsDialog(parent=self.dlg)
+        outputs.ui.GSDw.setText("{:.3f}".format(self.method.GSDw))
+        outputs.ui.GSDh.setText("{:.3f}".format(self.method.GSDh))
+        outputs.ui.footprint_W.setText("{:.3f}".format(self.method.W))
+        outputs.ui.footprint_H.setText("{:.3f}".format(self.method.H))
+        outputs.ui.px_size.setText("{:.3f}".format(self.method.pixel_size))
+        outputs.ui.UAS_min_speed.setText("{:.3f}".format(self.method.UAS_v_min))
+        outputs.ui.max_dist.setText("{:.3f}".format(self.method.max_distance))
+        outputs.ui.max_dist_proj.setText("{:.3f}".format(self.method.max_distance_proj))
+        outputs.ui.baseline.setText("{:.3f}".format(self.method.b))
+        outputs.ui.b_real.setText("{:.3f}".format(self.method.b_real))
+        outputs.ui.interaxie.setText("{:.3f}".format(self.method.interaxie))
+        outputs.ui.i_real.setText("{:.3f}".format(self.method.i_real))
+        outputs.ui.nstrip_x.setText("{:.3f}".format(self.method.nstrip_x))
+        outputs.ui.nstrip_y.setText("{:.3f}".format(self.method.nstrip_y))
+        outputs.ui.n_img.setText("{:.3f}".format(self.method.num_images))
+        outputs.ui.Rl_real.setText("{:.3f}".format(self.method.Rl_real))
+        outputs.ui.Rt_real.setText("{:.3f}".format(self.method.Rt_real))
+        outputs.ui.pb_error.clicked.connect(self.error_map)
+        outputs.ui.pb_overlap.clicked.connect(self.overlap_map)
+        outputs.show()
 
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
@@ -378,12 +405,33 @@ class DroneSurveyingPlanning:
             Rt = self.dlg.Rt.value() / 100
         elif self.dlg.auto:
             pass
+            pass
             # TODO
         else:
             raise AttributeError
         scoll = self.dlg.scoll.value()
 
-        outputs_all, outputs_along_track = normal_case(drone, sensor, X, Y, h, Rl, Rt, scoll)
+        if self.dlg.NormalCase:
+            if self.dlg.cb_density_n == "Low":
+                delta = min(Y, X) / 15  # number of points we want on the smaller axis
+            elif self.dlg.cb_density_n == "Medium":
+                delta = min(Y, X) / 25  # number of points we want on the smaller axis
+            else:
+                delta = min(Y, X) / 35  # number of points we want on the smaller axis
+
+            self.method = NormalCaseMethod(drone, sensor, X, Y, h, Rl, Rt, scoll, delta)
+        elif self.dlg.Simulation:
+            if self.dlg.cb_density_s == "Low":
+                delta = np.floor(Y / X) * 15
+            elif self.dlg.cb_density_s == "Medium":
+                delta = np.floor(Y / X) * 10
+            else:
+                delta = np.floor(Y / X) * 5
+            self.method = SimulationMethod(drone, sensor, X, Y, h, Rl, Rt, scoll, delta)
+        elif self.dlg.DTM:
+            pass
+        else:
+            raise AttributeError
         self.open_DSPoutputs_dialog()
 
 
