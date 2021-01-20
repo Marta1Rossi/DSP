@@ -32,13 +32,13 @@ from qgis.core import *
 import numpy as np
 
 from .DSP_HELP import Ui_Dialog as DSPHELP
+from .DSP_error import Ui_Dialog as DSPError
 from .DSP_outputs import Ui_Dialog as DSPoutputs
 # Import the code for the dialog
 from .DSP_dialog import DroneSurveyingPlanningDialog
 from .NewDrone import Ui_Dialog as drone
 from .NewSensor import Ui_Dialog as sensor
 from .survey_planning import NormalCaseMethod, SimulationMethod
-
 
 
 #define new dialog windows
@@ -58,6 +58,12 @@ class DSPHELPDialog(QtWidgets.QDialog):
     def __init__(self, parent):
         super(DSPHELPDialog, self).__init__(parent)
         self.ui = DSPHELP()
+        self.ui.setupUi(self)
+
+class DSPErrorDialog(QtWidgets.QDialog):
+    def __init__(self, parent):
+        super(DSPErrorDialog, self).__init__(parent)
+        self.ui = DSPError()
         self.ui.setupUi(self)
 
 class DSPoutputsDialog(QtWidgets.QDialog):
@@ -223,7 +229,7 @@ class DroneSurveyingPlanning:
         self.dlg.tb_inDTM.clicked.connect(self.openDTM)
         self.dlg.pb_drone.clicked.connect(self.open_drone_dialog)
         self.dlg.pb_sensor.clicked.connect(self.open_sensor_dialog)
-        self.dlg.RUN.clicked.connect(self.run_function)
+        self.dlg.RUN.clicked.connect(self.run_function_handler)
         self.dlg.HelpPushButton.clicked.connect(self.open_DSPHELP_dialog)
         self.dlg.close_button.clicked.connect(self.dlg.close)
 
@@ -297,10 +303,9 @@ class DroneSurveyingPlanning:
         new_drone['MaxAltitude'] = self.droneDialog.ui.sb_altitude.value()
         new_drone['MaxSpeed'] = self.droneDialog.ui.sb_speed.value()
         new_drone['Battery'] = self.droneDialog.ui.sb_battery.value()
-        self.drone_list.append(new_drone)
+        self.drone_list.insert(0, new_drone)
         self.loadDrone()
         self.droneDialog.close()
-
 
     def open_sensor_dialog(self):
         """Open dialog to create a new drone"""
@@ -319,7 +324,7 @@ class DroneSurveyingPlanning:
         new_sensor['SizeY'] = self.sensorDialog.ui.sb_sizey.value()
         new_sensor['ImgSizeX'] = self.sensorDialog.ui.sb_imgsizex.value()
         new_sensor['ImgSizeY'] = self.sensorDialog.ui.sb_imgsizey.value()
-        self.sensor_list.append(new_sensor)
+        self.sensor_list.insert(0, new_sensor)
         self.loadSensor()
         self.sensorDialog.close()
 
@@ -327,6 +332,11 @@ class DroneSurveyingPlanning:
         """Opens the HELP dialog containing a description of plugin fields"""
         dsp_help = DSPHELPDialog(parent=self.dlg)
         dsp_help.show()
+
+    def open_error_dialog(self):
+        """Opens the error dialog if the radio buttons are not set"""
+        dsp_error = DSPErrorDialog(parent=self.dlg)
+        dsp_error.show()
 
     def overlap_map(self):
         """plots the overlapping map of our method"""
@@ -339,23 +349,23 @@ class DroneSurveyingPlanning:
     def open_DSPoutputs_dialog(self):
         """Opens an outputs dialog containing the computed results"""
         outputs = DSPoutputsDialog(parent=self.dlg)
-        outputs.ui.GSDw.setText("{:.3f}".format(self.method.GSDw))
-        outputs.ui.GSDh.setText("{:.3f}".format(self.method.GSDh))
-        outputs.ui.footprint_W.setText("{:.3f}".format(self.method.W))
-        outputs.ui.footprint_H.setText("{:.3f}".format(self.method.H))
-        outputs.ui.px_size.setText("{:.3f}".format(self.method.pixel_size))
-        outputs.ui.UAS_min_speed.setText("{:.3f}".format(self.method.UAS_v_min))
-        outputs.ui.max_dist.setText("{:.3f}".format(self.method.max_distance))
-        outputs.ui.max_dist_proj.setText("{:.3f}".format(self.method.max_distance_proj))
-        outputs.ui.baseline.setText("{:.3f}".format(self.method.b))
-        outputs.ui.b_real.setText("{:.3f}".format(self.method.b_real))
-        outputs.ui.interaxie.setText("{:.3f}".format(self.method.interaxie))
-        outputs.ui.i_real.setText("{:.3f}".format(self.method.i_real))
-        outputs.ui.nstrip_x.setText("{:.3f}".format(self.method.nstrip_x))
-        outputs.ui.nstrip_y.setText("{:.3f}".format(self.method.nstrip_y))
-        outputs.ui.n_img.setText("{:.3f}".format(self.method.num_images))
-        outputs.ui.Rl_real.setText("{:.3f}".format(self.method.Rl_real))
-        outputs.ui.Rt_real.setText("{:.3f}".format(self.method.Rt_real))
+        outputs.ui.GSDw.setText("{:.4f}".format(self.method.GSDw))
+        outputs.ui.GSDh.setText("{:.4f}".format(self.method.GSDh))
+        outputs.ui.footprint_W.setText("{:.4f}".format(self.method.W))
+        outputs.ui.footprint_H.setText("{:.4f}".format(self.method.H))
+        outputs.ui.px_size.setText("{:.4f}".format(self.method.pixel_size))
+        outputs.ui.UAS_min_speed.setText("{:.4f}".format(self.method.UAS_v_min))
+        outputs.ui.max_dist.setText("{:.4f}".format(self.method.max_distance))
+        outputs.ui.max_dist_proj.setText("{:.4f}".format(self.method.max_distance_proj))
+        outputs.ui.baseline.setText("{:.4f}".format(self.method.b))
+        outputs.ui.b_real.setText("{:.4f}".format(self.method.b_real))
+        outputs.ui.interaxie.setText("{:.4f}".format(self.method.interaxie))
+        outputs.ui.i_real.setText("{:.4f}".format(self.method.i_real))
+        outputs.ui.nstrip_x.setText("{:.4f}".format(self.method.nstrip_x))
+        outputs.ui.nstrip_y.setText("{:.4f}".format(self.method.nstrip_y))
+        outputs.ui.n_img.setText("{:.4f}".format(self.method.num_images))
+        outputs.ui.Rl_real.setText("{:.4f}".format(self.method.Rl_real))
+        outputs.ui.Rt_real.setText("{:.4f}".format(self.method.Rt_real))
         outputs.ui.pb_error.clicked.connect(self.error_map)
         outputs.ui.pb_overlap.clicked.connect(self.overlap_map)
         outputs.show()
@@ -390,13 +400,21 @@ class DroneSurveyingPlanning:
         #run_
     '''
 
+    def run_function_handler(self):
+        try:
+            self.run_function()
+        except AttributeError:
+            self.open_error_dialog()
+
     def run_function(self):
+
         drone = self.find_dict_in_list(list_=self.drone_list,
                                        key_name='DroneName',
-                                       key_value=self.dlg.cb_drone)
+                                       key_value=str(self.dlg.cb_drone.currentText()))
         sensor = self.find_dict_in_list(list_=self.sensor_list,
                                         key_name='SensorName',
-                                        key_value=self.dlg.cb_sensor)
+                                        key_value=str(self.dlg.cb_sensor.currentText()))
+
         X = self.dlg.Xdim.value()
         Y = self.dlg.Ydim.value()
         if self.dlg.Manual:
@@ -404,7 +422,6 @@ class DroneSurveyingPlanning:
             Rl = self.dlg.Rl.value() / 100
             Rt = self.dlg.Rt.value() / 100
         elif self.dlg.auto:
-            pass
             pass
             # TODO
         else:
@@ -416,22 +433,24 @@ class DroneSurveyingPlanning:
                 delta = min(Y, X) / 15  # number of points we want on the smaller axis
             elif self.dlg.cb_density_n == "Medium":
                 delta = min(Y, X) / 25  # number of points we want on the smaller axis
-            else:
+            else:  # High
                 delta = min(Y, X) / 35  # number of points we want on the smaller axis
-
             self.method = NormalCaseMethod(drone, sensor, X, Y, h, Rl, Rt, scoll, delta)
+
         elif self.dlg.Simulation:
             if self.dlg.cb_density_s == "Low":
-                delta = np.floor(Y / X) * 15
+                delta = min(Y, X) / 15  # number of points we want on the smaller axis
             elif self.dlg.cb_density_s == "Medium":
-                delta = np.floor(Y / X) * 10
-            else:
-                delta = np.floor(Y / X) * 5
+                delta = min(Y, X) / 25  # number of points we want on the smaller axis
+            else:  # High
+                delta = min(Y, X) / 35  # number of points we want on the smaller axis
             self.method = SimulationMethod(drone, sensor, X, Y, h, Rl, Rt, scoll, delta)
+
         elif self.dlg.DTM:
             pass
         else:
             raise AttributeError
+        self.method.algorithm()
         self.open_DSPoutputs_dialog()
 
 

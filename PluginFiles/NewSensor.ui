@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>431</width>
+    <width>452</width>
     <height>317</height>
    </rect>
   </property>
@@ -18,7 +18,7 @@
     <rect>
      <x>20</x>
      <y>110</y>
-     <width>391</width>
+     <width>411</width>
      <height>61</height>
     </rect>
    </property>
@@ -448,7 +448,7 @@
      <rect>
       <x>10</x>
       <y>20</y>
-      <width>173</width>
+      <width>191</width>
       <height>22</height>
      </rect>
     </property>
@@ -461,19 +461,6 @@
       </widget>
      </item>
      <item>
-      <spacer name="horizontalSpacer_2">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-     <item>
       <widget class="QDoubleSpinBox" name="sb_sizex"/>
      </item>
     </layout>
@@ -483,7 +470,7 @@
      <rect>
       <x>210</x>
       <y>20</y>
-      <width>173</width>
+      <width>191</width>
       <height>22</height>
      </rect>
     </property>
@@ -494,19 +481,6 @@
         <string>Sensor Size in Y [mm]:</string>
        </property>
       </widget>
-     </item>
-     <item>
-      <spacer name="horizontalSpacer_4">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
      </item>
      <item>
       <widget class="QDoubleSpinBox" name="sb_sizey"/>
@@ -532,12 +506,12 @@
     <rect>
      <x>20</x>
      <y>180</y>
-     <width>91</width>
+     <width>101</width>
      <height>16</height>
     </rect>
    </property>
    <property name="text">
-    <string>Image Size [pixel]</string>
+    <string>Image Size [pixels]</string>
    </property>
   </widget>
   <widget class="QFrame" name="frame_3">
@@ -545,7 +519,7 @@
     <rect>
      <x>20</x>
      <y>200</y>
-     <width>391</width>
+     <width>411</width>
      <height>61</height>
     </rect>
    </property>
@@ -560,7 +534,7 @@
      <rect>
       <x>10</x>
       <y>20</y>
-      <width>181</width>
+      <width>191</width>
       <height>22</height>
      </rect>
     </property>
@@ -573,20 +547,17 @@
       </widget>
      </item>
      <item>
-      <spacer name="horizontalSpacer_3">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
+      <widget class="QgsSpinBox" name="sb_imgsizex">
+       <property name="font">
+        <font>
+         <weight>50</weight>
+         <bold>false</bold>
+        </font>
        </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
+       <property name="maximum">
+        <number>10000</number>
        </property>
-      </spacer>
-     </item>
-     <item>
-      <widget class="QDoubleSpinBox" name="sb_imgsizex"/>
+      </widget>
      </item>
     </layout>
    </widget>
@@ -595,7 +566,7 @@
      <rect>
       <x>210</x>
       <y>20</y>
-      <width>181</width>
+      <width>191</width>
       <height>22</height>
      </rect>
     </property>
@@ -608,20 +579,17 @@
       </widget>
      </item>
      <item>
-      <spacer name="horizontalSpacer_5">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
+      <widget class="QgsSpinBox" name="sb_imgsizey">
+       <property name="font">
+        <font>
+         <weight>50</weight>
+         <bold>false</bold>
+        </font>
        </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
+       <property name="maximum">
+        <number>10000</number>
        </property>
-      </spacer>
-     </item>
-     <item>
-      <widget class="QDoubleSpinBox" name="sb_imgsizey"/>
+      </widget>
      </item>
     </layout>
    </widget>
@@ -629,9 +597,9 @@
   <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
-     <x>20</x>
+     <x>70</x>
      <y>20</y>
-     <width>271</width>
+     <width>291</width>
      <height>22</height>
     </rect>
    </property>
@@ -653,7 +621,7 @@
     <rect>
      <x>20</x>
      <y>60</y>
-     <width>181</width>
+     <width>201</width>
      <height>22</height>
     </rect>
    </property>
@@ -666,20 +634,11 @@
      </widget>
     </item>
     <item>
-     <spacer name="horizontalSpacer">
-      <property name="orientation">
-       <enum>Qt::Horizontal</enum>
+     <widget class="QDoubleSpinBox" name="sb_fl">
+      <property name="maximum">
+       <double>99.000000000000000</double>
       </property>
-      <property name="sizeHint" stdset="0">
-       <size>
-        <width>40</width>
-        <height>20</height>
-       </size>
-      </property>
-     </spacer>
-    </item>
-    <item>
-     <widget class="QDoubleSpinBox" name="sb_fl"/>
+     </widget>
     </item>
    </layout>
   </widget>
@@ -688,7 +647,7 @@
     <rect>
      <x>230</x>
      <y>60</y>
-     <width>170</width>
+     <width>191</width>
      <height>22</height>
     </rect>
    </property>
@@ -701,19 +660,6 @@
      </widget>
     </item>
     <item>
-     <spacer name="horizontalSpacer_6">
-      <property name="orientation">
-       <enum>Qt::Horizontal</enum>
-      </property>
-      <property name="sizeHint" stdset="0">
-       <size>
-        <width>40</width>
-        <height>20</height>
-       </size>
-      </property>
-     </spacer>
-    </item>
-    <item>
      <widget class="QDoubleSpinBox" name="sb_si"/>
     </item>
    </layout>
@@ -721,7 +667,7 @@
   <widget class="QPushButton" name="pb_oksensor">
    <property name="geometry">
     <rect>
-     <x>130</x>
+     <x>140</x>
      <y>280</y>
      <width>75</width>
      <height>23</height>
@@ -734,7 +680,7 @@
   <widget class="QPushButton" name="pb_close">
    <property name="geometry">
     <rect>
-     <x>220</x>
+     <x>230</x>
      <y>280</y>
      <width>75</width>
      <height>23</height>
@@ -745,6 +691,13 @@
    </property>
   </widget>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>QgsSpinBox</class>
+   <extends>QSpinBox</extends>
+   <header>qgsspinbox.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

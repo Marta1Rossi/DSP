@@ -7,23 +7,6 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 
 
-drone = {
-    "DroneName": "Pioneer",
-    "MaxAltitude": 40,
-    "MaxSpeed": 30,
-    "Battery": "50"
-}
-sensor = {
-    "SensorName": "Sens1",
-    "FocalLength": 15,
-    "ShootInterval": 2,
-    "SizeX": 17.3,
-    "SizeY": 13,
-    "ImgSizeX": 5280,
-    "ImgSizeY": 3956
-}
-
-
 class PredictionMethod:
     def __init__(self, drone, sensor, X, Y, h, Rl, Rt, scoll, delta):
         # Input-----------------------------------------------------------------------
@@ -31,8 +14,8 @@ class PredictionMethod:
         self.X = X
         self.Y = Y
         self.h = h
-        self.Rl = Rl
-        self.Rt = Rt
+        self.Rl = Rl / 100.
+        self.Rt = Rt / 100.
         self.scoll = scoll
 
         self.shooting_int = sensor['ShootInterval']
@@ -116,13 +99,12 @@ class PredictionMethod:
         # determine the overlapping maps
         self.Over_x, self.Over_y = np.meshgrid(over_x, over_y)
 
-    def plot_error(self):
-        raise NotImplementedError
-
     def plot_overlapping(self):
         fig, ((ax11, ax12), (ax21, ax22)) = plt.subplots(nrows=2, ncols=2)
         x_rect = np.array([0, self.X, self.X, 0, 0])
         y_rect = np.array([0, 0, self.Y, self.Y, 0])
+
+        # Longitudinal Overlapping plot
         ax11.plot(x_rect, y_rect, 'r')
         ax11.axis('equal')
         im = ax11.imshow(self.Over_y, extent=[0, self.X, 0, self.Y])
@@ -130,17 +112,27 @@ class PredictionMethod:
         ax11.plot(self.flpath[:, 0], self.flpath[:, 1], 'r')
         fig.colorbar(im, ax=ax11)
         ax11.set_title("Longitudinal Overlapping")
+
+        # Transversal Overlapping plot
+        ax12.plot(x_rect, y_rect, 'r')
+        ax12.axis('equal')
+        im = ax12.imshow(self.Over_x, extent=[0, self.X, 0, self.Y])
+        ax12.plot(self.Xo, self.Yo, '.k')
+        ax12.plot(self.flpath[:, 0], self.flpath[:, 1], 'r')
+        fig.colorbar(im, ax=ax12)
+        ax12.set_title("Transversal Overlapping")
+
+        # Overlapping map
+        ax21.plot(x_rect, y_rect, 'r')
+        ax21.axis('equal')
+        im = ax21.imshow(self.Over_x + self.Over_y, extent=[0, self.X, 0, self.Y])
+        ax21.plot(self.Xo, self.Yo, '.k')
+        ax21.plot(self.flpath[:, 0], self.flpath[:, 1], 'r')
+        fig.colorbar(im, ax=ax21)
+        ax21.set_title("Overlapping map")
+
         fig.delaxes(ax22)
         plt.show()
-        #fig.imshow()
-
-    def algorithm(self):
-        raise NotImplementedError
-
-
-#method = NormalCaseMethod()
-#method.algorithm()
-#print(method.sigma_csi)
 
 
 class NormalCaseMethod(PredictionMethod):
@@ -154,12 +146,14 @@ class NormalCaseMethod(PredictionMethod):
     def algorithm(self):
 
         # error map (derived from overlapping map) -----------------------------------
-        s2px = 2 * (self.scoll*self.fw/self.npx)**2                #  sigma2 of the parallax (propagating the sigma of collimation) [mm^2]
-        s2zy = (self.h**2 / (self.c*1e-3 * self.i_real))**2 * s2px #  sigma2 of the computed z considering longitudinal overlapping [mm^2]
-        s2zx = (self.h**2 / (self.c*1e-3 * self.b_real))**2 * s2px #  sigma2 of the computed z considering transversal overlapping  [mm^2]
+        self.s2px = 2 * (self.scoll*self.fw/self.npx)**2                      #  sigma2 of the parallax (propagating the sigma of collimation) [mm^2]
+        self.s2zy = (self.h**2 / (self.c*1e-3 * self.i_real))**2 * self.s2px  #  sigma2 of the computed z considering longitudinal overlapping [mm^2]
+        self.s2zx = (self.h**2 / (self.c*1e-3 * self.b_real))**2 * self.s2px  #  sigma2 of the computed z considering transversal overlapping  [mm^2]
 
         # propagate s2zx and s2zy
-        sz1 = np.sqrt(((s2zy * (self.Over_y - 1) + s2zx * (self.Over_x - 1))/ ((self.Over_y - 1) + (self.Over_x - 1))**2))
+        self.sz1 = np.sqrt(
+            ((self.s2zy * (self.Over_y - 1) + self.s2zx * (self.Over_x - 1)) / ((self.Over_y - 1) + (self.Over_x - 1))**2)
+        )
 
 
 class SimulationMethod(PredictionMethod):
@@ -271,6 +265,7 @@ class SimulationMethod(PredictionMethod):
         x_coo = []   # x coordinate of non-zero values
         y_coo = []   # y coordinate of non-zero values
         values = []  # values different from zero in N matrix
+
         for i in bar:
             b = np.zeros((N.shape[0],))
             b[i] = 1
@@ -291,7 +286,6 @@ class SimulationMethod(PredictionMethod):
         # here we create the sparse matrix from the positions of non zero values and their
         # actual value
         invN = csr_matrix((values, (x_coo, y_coo)), shape=(N.shape[0], N.shape[1]))
-        print("the matrix N has been inverted")
 
         yo = yo.reshape(-1)  # this command create a vector from a matrix
         nt = A_transpose @ yo  # normal known term
@@ -300,8 +294,6 @@ class SimulationMethod(PredictionMethod):
         # LS residuals
         v_est = yo - A @ x
         s02 = (v_est.transpose() @ v_est) / (A.shape[0] - A.shape[1])  # a-posteriori variance
-        print(s02)
-
 
         # vector of standard deviation (diagolanal of the parameter covariance
         # matrix, rescaled by the a-priori collimation std)

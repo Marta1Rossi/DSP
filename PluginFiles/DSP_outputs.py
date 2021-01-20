@@ -11,12 +11,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_Dialog(object):
     def setupUi(self, Dialog):
         Dialog.setObjectName("Dialog")
-        Dialog.resize(771, 443)
-        self.buttonBox = QtWidgets.QDialogButtonBox(Dialog)
-        self.buttonBox.setGeometry(QtCore.QRect(120, 400, 331, 32))
-        self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
-        self.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.Cancel|QtWidgets.QDialogButtonBox.Ok)
-        self.buttonBox.setObjectName("buttonBox")
+        Dialog.resize(771, 466)
         self.label_9 = QtWidgets.QLabel(Dialog)
         self.label_9.setGeometry(QtCore.QRect(320, 10, 271, 20))
         font = QtGui.QFont()
@@ -231,10 +226,22 @@ class Ui_Dialog(object):
 "")
         self.Rt_real.setText("")
         self.Rt_real.setObjectName("Rt_real")
+        self.tb_browse = QtWidgets.QToolButton(Dialog)
+        self.tb_browse.setGeometry(QtCore.QRect(520, 410, 31, 21))
+        self.tb_browse.setObjectName("tb_browse")
+        self.lineEdit = QtWidgets.QLineEdit(Dialog)
+        self.lineEdit.setGeometry(QtCore.QRect(250, 410, 261, 20))
+        self.lineEdit.setObjectName("lineEdit")
+        self.label_15 = QtWidgets.QLabel(Dialog)
+        self.label_15.setGeometry(QtCore.QRect(200, 410, 41, 20))
+        font = QtGui.QFont()
+        font.setPointSize(8)
+        font.setBold(True)
+        font.setWeight(75)
+        self.label_15.setFont(font)
+        self.label_15.setObjectName("label_15")
 
         self.retranslateUi(Dialog)
-        self.buttonBox.accepted.connect(Dialog.accept)
-        self.buttonBox.rejected.connect(Dialog.reject)
         QtCore.QMetaObject.connectSlotsByName(Dialog)
 
     def retranslateUi(self, Dialog):
@@ -262,4 +269,6 @@ class Ui_Dialog(object):
         self.label_20.setText(_translate("Dialog", "Real transversal Overlapping [%]:"))
         self.label_42.setText(_translate("Dialog", "Overlapping Map:"))
         self.pb_overlap.setText(_translate("Dialog", "Plot"))
+        self.tb_browse.setText(_translate("Dialog", "..."))
+        self.label_15.setText(_translate("Dialog", "Export:"))
 

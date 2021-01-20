@@ -16,7 +16,7 @@
   <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
-     <x>20</x>
+     <x>40</x>
      <y>20</y>
      <width>261</width>
      <height>22</height>
@@ -38,7 +38,7 @@
   <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
-     <x>20</x>
+     <x>60</x>
      <y>60</y>
      <width>211</width>
      <height>22</height>
@@ -66,14 +66,18 @@
      </spacer>
     </item>
     <item>
-     <widget class="QDoubleSpinBox" name="sb_altitude"/>
+     <widget class="QDoubleSpinBox" name="sb_altitude">
+      <property name="maximum">
+       <double>10000.000000000000000</double>
+      </property>
+     </widget>
     </item>
    </layout>
   </widget>
   <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
-     <x>20</x>
+     <x>60</x>
      <y>100</y>
      <width>211</width>
      <height>22</height>
@@ -101,14 +105,18 @@
      </spacer>
     </item>
     <item>
-     <widget class="QDoubleSpinBox" name="sb_speed"/>
+     <widget class="QDoubleSpinBox" name="sb_speed">
+      <property name="maximum">
+       <double>1000.000000000000000</double>
+      </property>
+     </widget>
     </item>
    </layout>
   </widget>
   <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
-     <x>20</x>
+     <x>60</x>
      <y>140</y>
      <width>211</width>
      <height>22</height>
@@ -136,7 +144,11 @@
      </spacer>
     </item>
     <item>
-     <widget class="QDoubleSpinBox" name="sb_battery"/>
+     <widget class="QDoubleSpinBox" name="sb_battery">
+      <property name="maximum">
+       <double>10000.000000000000000</double>
+      </property>
+     </widget>
     </item>
    </layout>
   </widget>
