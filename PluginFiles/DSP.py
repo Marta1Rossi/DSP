@@ -27,12 +27,10 @@ import os.path
 from qgis.PyQt import QtWidgets
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
 from qgis.PyQt.QtGui import *
-from qgis.PyQt.QtWidgets import QAction, QFileDialog
+from qgis.PyQt.QtWidgets import QAction, QFileDialog, QMessageBox
 from qgis.core import *
-import numpy as np
 
 from .DSP_HELP import Ui_Dialog as DSPHELP
-from .DSP_error import Ui_Dialog as DSPError
 from .DSP_outputs import Ui_Dialog as DSPoutputs
 # Import the code for the dialog
 from .DSP_dialog import DroneSurveyingPlanningDialog
@@ -40,6 +38,12 @@ from .NewDrone import Ui_Dialog as drone
 from .NewSensor import Ui_Dialog as sensor
 from .survey_planning import NormalCaseMethod, SimulationMethod
 
+
+class RadioButtonError(AttributeError):
+    pass
+
+class UnfilledError(Exception):
+    pass
 
 #define new dialog windows
 class DroneDialog(QtWidgets.QDialog):
@@ -58,12 +62,6 @@ class DSPHELPDialog(QtWidgets.QDialog):
     def __init__(self, parent):
         super(DSPHELPDialog, self).__init__(parent)
         self.ui = DSPHELP()
-        self.ui.setupUi(self)
-
-class DSPErrorDialog(QtWidgets.QDialog):
-    def __init__(self, parent):
-        super(DSPErrorDialog, self).__init__(parent)
-        self.ui = DSPError()
         self.ui.setupUi(self)
 
 class DSPoutputsDialog(QtWidgets.QDialog):
@@ -100,7 +98,7 @@ class DroneSurveyingPlanning:
             self.translator.load(locale_path)
             QCoreApplication.installTranslator(self.translator)
 
-        #
+
         drone_file = open(os.path.join(self.plugin_dir, 'listadroni.json'))
         self.drone_list = json.load(drone_file)['DroneList']
 
@@ -308,7 +306,7 @@ class DroneSurveyingPlanning:
         self.droneDialog.close()
 
     def open_sensor_dialog(self):
-        """Open dialog to create a new drone"""
+        """Open dialog to create a new sensor"""
         self.sensorDialog = SensorDialog(parent=self.dlg)
         self.sensorDialog.ui.pb_oksensor.clicked.connect(self.collect_sensor)
         self.sensorDialog.ui.pb_close.clicked.connect(self.sensorDialog.close)
@@ -333,17 +331,20 @@ class DroneSurveyingPlanning:
         dsp_help = DSPHELPDialog(parent=self.dlg)
         dsp_help.show()
 
-    def open_error_dialog(self):
-        """Opens the error dialog if the radio buttons are not set"""
-        dsp_error = DSPErrorDialog(parent=self.dlg)
-        dsp_error.show()
+
+    def show_popup(self, message):
+        msg = QMessageBox()
+        msg.setWindowTitle("ERROR")
+        msg.setText(message)
+        msg.exec()
+
 
     def overlap_map(self):
         """plots the overlapping map of our method"""
         self.method.plot_overlapping()
 
     def error_map(self):
-        """Opens the HELP dialog containing a description of plugin fields"""
+        """plots the error map of our method"""
         self.method.plot_error()
 
     def open_DSPoutputs_dialog(self):
@@ -383,28 +384,15 @@ class DroneSurveyingPlanning:
             if i[key_name] == key_value:
                 return i
         return list_[0]
-    '''
-    def start_simulation(self):
-        
-        #prende il drone che ti serve
-        selected_drone = self.find_dict_in_list(list_ = self.drone_list,
-                               key_name='DroneName',
-                               key_value=''#recupera valore da tendina)
 
-        #prende il sensore che ti serve
-        selected_sensor = self.find_dict_in_list(list_ = self.sensor_list,
-                               key_name='SensorName',
-                               key_value=''#recupera valore da tendina)
-
-        #fa il resto
-        #run_
-    '''
 
     def run_function_handler(self):
         try:
             self.run_function()
-        except AttributeError:
-            self.open_error_dialog()
+        except RadioButtonError:
+            self.show_popup("You must select both Planning Parameters and a Model for Accuracy Prediction")
+        except UnfilledError:
+            self.show_popup("Fill all input parameters")
 
     def run_function(self):
 
@@ -417,40 +405,55 @@ class DroneSurveyingPlanning:
 
         X = self.dlg.Xdim.value()
         Y = self.dlg.Ydim.value()
-        if self.dlg.Manual:
+
+        if self.dlg.Manual.isChecked():
             h = self.dlg.h.value()
-            Rl = self.dlg.Rl.value() / 100
-            Rt = self.dlg.Rt.value() / 100
-        elif self.dlg.auto:
+            Rl = self.dlg.Rl.value()
+            Rt = self.dlg.Rt.value()
+            if Rt == 0 or Rl == 0:
+                raise UnfilledError
+
+            
+        elif self.dlg.Auto.isChecked():
             pass
             # TODO
         else:
-            raise AttributeError
+            raise RadioButtonError
         scoll = self.dlg.scoll.value()
 
-        if self.dlg.NormalCase:
-            if self.dlg.cb_density_n == "Low":
+        if self.dlg.NormalCase.isChecked():
+            if self.dlg.cb_density_n.currentText() == "Low":
                 delta = min(Y, X) / 15  # number of points we want on the smaller axis
-            elif self.dlg.cb_density_n == "Medium":
+            elif self.dlg.cb_density_n.currentText() == "Medium":
                 delta = min(Y, X) / 25  # number of points we want on the smaller axis
             else:  # High
                 delta = min(Y, X) / 35  # number of points we want on the smaller axis
-            self.method = NormalCaseMethod(drone, sensor, X, Y, h, Rl, Rt, scoll, delta)
+            try:
+                self.method = NormalCaseMethod(drone, sensor, X, Y, h, Rl, Rt, scoll, delta)
+            except ZeroDivisionError:
+                raise UnfilledError
 
-        elif self.dlg.Simulation:
-            if self.dlg.cb_density_s == "Low":
+
+        elif self.dlg.Simulation.isChecked():
+            if self.dlg.cb_density_s.currentText() == "Low":
                 delta = min(Y, X) / 15  # number of points we want on the smaller axis
-            elif self.dlg.cb_density_s == "Medium":
+            elif self.dlg.cb_density_s.currentText() == "Medium":
                 delta = min(Y, X) / 25  # number of points we want on the smaller axis
             else:  # High
                 delta = min(Y, X) / 35  # number of points we want on the smaller axis
-            self.method = SimulationMethod(drone, sensor, X, Y, h, Rl, Rt, scoll, delta)
+            try:
+                self.method = SimulationMethod(drone, sensor, X, Y, h, Rl, Rt, scoll, delta)
+            except ZeroDivisionError:
+                raise UnfilledError
 
-        elif self.dlg.DTM:
+        elif self.dlg.DTM.isChecked():
             pass
         else:
-            raise AttributeError
-        self.method.algorithm()
+            raise RadioButtonError
+        try:
+            self.method.algorithm()
+        except ZeroDivisionError:
+            raise UnfilledError
         self.open_DSPoutputs_dialog()
 
 
@@ -466,6 +469,7 @@ class DroneSurveyingPlanning:
         self.dlg.show()
         self.loadVectors()
         self.loadDTM()
+
         # Run the dialog event loop
         result = self.dlg.exec_()
         # See if OK was pressed

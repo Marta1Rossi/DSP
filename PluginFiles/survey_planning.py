@@ -3,7 +3,6 @@ import scipy
 from numpy.random import randn
 from scipy.sparse import csr_matrix
 import scipy.sparse.linalg
-from tqdm import tqdm
 import matplotlib.pyplot as plt
 
 
@@ -36,8 +35,8 @@ class PredictionMethod:
         self.GSDw = self.W / self.npx   # GSD              [m]
         self.GSDh = self.H / self.npy   # GSD (check)      [m]
 
-        self.b = (1-Rl) * self.H   # baseline
-        self.interaxie = (1-Rt) * self.W   # interaxie
+        self.b = (1-self.Rl) * self.H   # baseline
+        self.interaxie = (1-self.Rt) * self.W   # interaxie
 
         self.nstrip_y = np.ceil(Y/self.b)   # number of strips in y
         self.nstrip_x = np.ceil(X/self.interaxie)   # number of strips in x
@@ -132,6 +131,7 @@ class PredictionMethod:
         ax21.set_title("Overlapping map")
 
         fig.delaxes(ax22)
+        fig.tight_layout(pad=2.0)
         plt.show()
 
 
@@ -141,7 +141,17 @@ class NormalCaseMethod(PredictionMethod):
         super().__init__(drone, sensor, X, Y, h, Rl, Rt, scoll, delta)
 
     def plot_error(self):
-        pass
+        x_rect = np.array([0, self.X, self.X, 0, 0])
+        y_rect = np.array([0, 0, self.Y, self.Y, 0])
+
+        plt.plot(x_rect, y_rect, 'r')
+        plt.axis('equal')
+        im = plt.imshow(self.sz1, extent=[0, self.X, 0, self.Y])
+        plt.plot(self.Xo, self.Yo, '.k')
+        plt.plot(self.flpath[:, 0], self.flpath[:, 1], 'r')
+        plt.colorbar(im)
+        plt.title("Estimated error [mm] - NC - sigma_z")
+        plt.show()
 
     def algorithm(self):
 
@@ -162,7 +172,66 @@ class SimulationMethod(PredictionMethod):
         super(SimulationMethod, self).__init__(drone, sensor, X, Y, h, Rl, Rt, scoll, delta)
 
     def plot_error(self):
-        pass
+        fig, ((ax11, ax12), (ax21, ax22), (ax31, ax32)) = plt.subplots(nrows=3, ncols=2)
+        x_rect = np.array([0, self.X, self.X, 0, 0])
+        y_rect = np.array([0, 0, self.Y, self.Y, 0])
+
+        # LS sigma-z (theoretical)
+        ax11.plot(x_rect, y_rect, 'r')
+        ax11.axis('equal')
+        im = ax11.imshow(self.sz2, extent=[0, self.X, 0, self.Y])
+        ax11.plot(self.Xo, self.Yo, '.k')
+        ax11.plot(self.flpath[:, 0], self.flpath[:, 1], 'r')
+        fig.colorbar(im, ax=ax11)
+        ax11.set_title("Estimated error [mm] - LS σz (theor)",fontsize=8)
+
+        # LS sigma-z (empirical)
+        ax12.plot(x_rect, y_rect, 'r')
+        ax12.axis('equal')
+        im = ax12.imshow(self.sz3, extent=[0, self.X, 0, self.Y])
+        ax12.plot(self.Xo, self.Yo, '.k')
+        ax12.plot(self.flpath[:, 0], self.flpath[:, 1], 'r')
+        fig.colorbar(im, ax=ax12)
+        ax12.set_title("Estimated error [mm] - LS σz (emp)",fontsize=8)
+
+        # LS sigma-x (theoretical)
+        ax21.plot(x_rect, y_rect, 'r')
+        ax21.axis('equal')
+        im = ax21.imshow(self.sx2, extent=[0, self.X, 0, self.Y])
+        ax21.plot(self.Xo, self.Yo, '.k')
+        ax21.plot(self.flpath[:, 0], self.flpath[:, 1], 'r')
+        fig.colorbar(im, ax=ax21)
+        ax21.set_title("Estimated error [mm] - LS σx (theor)",fontsize=8)
+
+        # LS sigma-x (empirical)
+        ax22.plot(x_rect, y_rect, 'r')
+        ax22.axis('equal')
+        im = ax22.imshow(self.sx3, extent=[0, self.X, 0, self.Y])
+        ax22.plot(self.Xo, self.Yo, '.k')
+        ax22.plot(self.flpath[:, 0], self.flpath[:, 1], 'r')
+        fig.colorbar(im, ax=ax22)
+        ax22.set_title("Estimated error [mm] - LS σx (emp)",fontsize=8)
+
+        # LS sigma-y (theoretical)
+        ax31.plot(x_rect, y_rect, 'r')
+        ax31.axis('equal')
+        im = ax31.imshow(self.sy2, extent=[0, self.X, 0, self.Y])
+        ax31.plot(self.Xo, self.Yo, '.k')
+        ax31.plot(self.flpath[:, 0], self.flpath[:, 1], 'r')
+        fig.colorbar(im, ax=ax31)
+        ax31.set_title("Estimated error [mm] - LS σy (theor)",fontsize=8)
+
+        # LS sigma-y (empirical)
+        ax32.plot(x_rect, y_rect, 'r')
+        ax32.axis('equal')
+        im = ax32.imshow(self.sy3, extent=[0, self.X, 0, self.Y])
+        ax32.plot(self.Xo, self.Yo, '.k')
+        ax32.plot(self.flpath[:, 0], self.flpath[:, 1], 'r')
+        fig.colorbar(im, ax=ax32)
+        ax32.set_title("Estimated error [mm] - LS σy (emp)",fontsize=8)
+
+        fig.tight_layout(pad=2.0)
+        plt.show()
 
     def algorithm(self):
         #########################simulation part ########################
@@ -240,9 +309,6 @@ class SimulationMethod(PredictionMethod):
             )
         )
 
-        print("matrix A created")
-
-
         im_obs_x = im_obs // self.nstrip_y
         im_obs_y = im_obs % self.nstrip_y
         my_Xo = np.zeros(len(im_obs))
@@ -261,12 +327,11 @@ class SimulationMethod(PredictionMethod):
         # this method is less compact, but we use tqdm's bar to check our progress
         lu = scipy.sparse.linalg.splu(N)
 
-        bar = tqdm(range(N.shape[0]))
         x_coo = []   # x coordinate of non-zero values
         y_coo = []   # y coordinate of non-zero values
         values = []  # values different from zero in N matrix
 
-        for i in bar:
+        for i in range(N.shape[0]):
             b = np.zeros((N.shape[0],))
             b[i] = 1
             current_row = lu.solve(b)
@@ -295,7 +360,7 @@ class SimulationMethod(PredictionMethod):
         v_est = yo - A @ x
         s02 = (v_est.transpose() @ v_est) / (A.shape[0] - A.shape[1])  # a-posteriori variance
 
-        # vector of standard deviation (diagolanal of the parameter covariance
+        # vector of standard deviation (diagonal of the parameter covariance
         # matrix, rescaled by the a-priori collimation std)
         invN_diag = invN.diagonal()
 
@@ -303,14 +368,14 @@ class SimulationMethod(PredictionMethod):
         s3 = (self.scoll*self.fw/self.npx * self.Zo) * np.sqrt(invN_diag)  # [m] from "theoretical" s02
 
         # extract the error map in the three components("empirical")
-        sx2 = np.reshape(s2[0: n_pt], self.XGrid.shape) * 1e3             # [mm]
-        sy2 = np.reshape(s2[n_pt: 2 * n_pt], self.XGrid.shape) * 1e3      # [mm]
-        sz2 = np.reshape(s2[2 * n_pt: 3 * n_pt], self.XGrid.shape) * 1e3  # [mm]
+        self.sx2 = np.reshape(s2[0: n_pt], self.XGrid.shape) * 1e3             # [mm]
+        self.sy2 = np.reshape(s2[n_pt: 2 * n_pt], self.XGrid.shape) * 1e3      # [mm]
+        self.sz2 = np.reshape(s2[2 * n_pt: 3 * n_pt], self.XGrid.shape) * 1e3  # [mm]
 
         # extract the error map in the three components("theoretical")
-        sx3 = np.reshape(s3[0: n_pt], self.XGrid.shape) * 1e3             # [mm]
-        sy3 = np.reshape(s3[n_pt: 2 * n_pt], self.XGrid.shape) * 1e3      # [mm]
-        sz3 = np.reshape(s3[2 * n_pt: 3 * n_pt], self.XGrid.shape) * 1e3  # [mm]
+        self.sx3 = np.reshape(s3[0: n_pt], self.XGrid.shape) * 1e3             # [mm]
+        self.sy3 = np.reshape(s3[n_pt: 2 * n_pt], self.XGrid.shape) * 1e3      # [mm]
+        self.sz3 = np.reshape(s3[2 * n_pt: 3 * n_pt], self.XGrid.shape) * 1e3  # [mm]
 
         #invN = scipy.sparse.linalg.inv(N)
         #L = csr_matrix(np.linalg.cholesky(N.todense()))

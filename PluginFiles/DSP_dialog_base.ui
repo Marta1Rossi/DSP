@@ -57,7 +57,7 @@
    <property name="checkable">
     <bool>false</bool>
    </property>
-   <widget class="QRadioButton" name="auto_2">
+   <widget class="QRadioButton" name="Auto">
     <property name="geometry">
      <rect>
       <x>10</x>
