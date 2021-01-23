@@ -4,11 +4,13 @@
     <list default="true" id="60913502-46cf-443c-8760-f190adc93d3b" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/PluginFiles/DSP.py" beforeDir="false" afterPath="$PROJECT_DIR$/PluginFiles/DSP.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/PluginFiles/DSP_dialog_base.ui" beforeDir="false" afterPath="$PROJECT_DIR$/PluginFiles/DSP_dialog_base.ui" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/PluginFiles/DSP_error.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/PluginFiles/DSP_error.ui" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/PluginFiles/NewDrone.py" beforeDir="false" afterPath="$PROJECT_DIR$/PluginFiles/NewDrone.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/PluginFiles/NewDrone.ui" beforeDir="false" afterPath="$PROJECT_DIR$/PluginFiles/NewDrone.ui" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/PluginFiles/pb_tool.cfg" beforeDir="false" afterPath="$PROJECT_DIR$/PluginFiles/pb_tool.cfg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/PluginFiles/progress_bar.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/PluginFiles/progress_bar.ui" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/PluginFiles/survey_planning.py" beforeDir="false" afterPath="$PROJECT_DIR$/PluginFiles/survey_planning.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/PluginFiles/test.py" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -118,29 +120,25 @@
       <screen x="0" y="0" width="1366" height="728" />
     </state>
     <state x="115" y="0" width="1092" height="728" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.0.1366.728@0.0.1366.728" timestamp="1609412038717" />
-    <state x="413" y="111" key="#com.intellij.refactoring.safeDelete.UnsafeUsagesDialog" timestamp="1602685121332">
-      <screen x="0" y="0" width="1366" height="728" />
-    </state>
-    <state x="413" y="111" key="#com.intellij.refactoring.safeDelete.UnsafeUsagesDialog/0.0.1366.728@0.0.1366.728" timestamp="1602685121332" />
     <state x="463" y="119" key="FileChooserDialogImpl" timestamp="1609412037957">
       <screen x="0" y="0" width="1366" height="728" />
     </state>
     <state x="463" y="119" key="FileChooserDialogImpl/0.0.1366.728@0.0.1366.728" timestamp="1609412037957" />
-    <state width="1345" height="541" key="GridCell.Tab.0.bottom" timestamp="1610993449880">
+    <state width="1345" height="541" key="GridCell.Tab.0.bottom" timestamp="1611428585934">
       <screen x="0" y="0" width="1366" height="728" />
     </state>
-    <state width="1345" height="541" key="GridCell.Tab.0.bottom/0.0.1366.728@0.0.1366.728" timestamp="1610993449880" />
-    <state width="1345" height="541" key="GridCell.Tab.0.center" timestamp="1610993449880">
+    <state width="1345" height="541" key="GridCell.Tab.0.bottom/0.0.1366.728@0.0.1366.728" timestamp="1611428585934" />
+    <state width="1345" height="541" key="GridCell.Tab.0.center" timestamp="1611428585934">
       <screen x="0" y="0" width="1366" height="728" />
     </state>
-    <state width="1345" height="541" key="GridCell.Tab.0.center/0.0.1366.728@0.0.1366.728" timestamp="1610993449880" />
-    <state width="1345" height="541" key="GridCell.Tab.0.left" timestamp="1610993449880">
+    <state width="1345" height="541" key="GridCell.Tab.0.center/0.0.1366.728@0.0.1366.728" timestamp="1611428585934" />
+    <state width="1345" height="541" key="GridCell.Tab.0.left" timestamp="1611428585934">
       <screen x="0" y="0" width="1366" height="728" />
     </state>
-    <state width="1345" height="541" key="GridCell.Tab.0.left/0.0.1366.728@0.0.1366.728" timestamp="1610993449880" />
-    <state width="1345" height="541" key="GridCell.Tab.0.right" timestamp="1610993449880">
+    <state width="1345" height="541" key="GridCell.Tab.0.left/0.0.1366.728@0.0.1366.728" timestamp="1611428585934" />
+    <state width="1345" height="541" key="GridCell.Tab.0.right" timestamp="1611428585934">
       <screen x="0" y="0" width="1366" height="728" />
     </state>
-    <state width="1345" height="541" key="GridCell.Tab.0.right/0.0.1366.728@0.0.1366.728" timestamp="1610993449880" />
+    <state width="1345" height="541" key="GridCell.Tab.0.right/0.0.1366.728@0.0.1366.728" timestamp="1611428585934" />
   </component>
 </project>

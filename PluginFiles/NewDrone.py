@@ -84,7 +84,7 @@ class Ui_Dialog(object):
         Dialog.setWindowTitle(_translate("Dialog", "Drone"))
         self.label.setText(_translate("Dialog", "Drone Name:"))
         self.label_2.setText(_translate("Dialog", "Max. Altitude [m]:"))
-        self.label_3.setText(_translate("Dialog", "UAS Max. Speed [Km/h:]"))
+        self.label_3.setText(_translate("Dialog", "UAS Max. Speed [km/h:]"))
         self.label_4.setText(_translate("Dialog", "Battery Duration [min]:"))
         self.pb_okdrone.setText(_translate("Dialog", "OK"))
         self.pb_close.setText(_translate("Dialog", "Cancel"))

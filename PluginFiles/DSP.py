@@ -36,7 +36,8 @@ from .DSP_outputs import Ui_Dialog as DSPoutputs
 from .DSP_dialog import DroneSurveyingPlanningDialog
 from .NewDrone import Ui_Dialog as drone
 from .NewSensor import Ui_Dialog as sensor
-from .survey_planning import NormalCaseMethod, SimulationMethod
+from .progress_msg import Ui_Dialog as progress_msg
+from .survey_planning import NormalCaseMethod, SimulationMethod, DroneShootingMaxSpeedError, DroneBatteryError, DroneAltitudeError
 
 
 class RadioButtonError(AttributeError):
@@ -62,6 +63,12 @@ class DSPHELPDialog(QtWidgets.QDialog):
     def __init__(self, parent):
         super(DSPHELPDialog, self).__init__(parent)
         self.ui = DSPHELP()
+        self.ui.setupUi(self)
+
+class ProgressMsg(QtWidgets.QDialog):
+    def __init__(self, parent):
+        super(ProgressMsg, self).__init__(parent)
+        self.ui = progress_msg()
         self.ui.setupUi(self)
 
 class DSPoutputsDialog(QtWidgets.QDialog):
@@ -331,13 +338,12 @@ class DroneSurveyingPlanning:
         dsp_help = DSPHELPDialog(parent=self.dlg)
         dsp_help.show()
 
-
-    def show_popup(self, message):
+    def show_popup(self, title, message):
         msg = QMessageBox()
-        msg.setWindowTitle("ERROR")
+        msg.setWindowTitle(title)
         msg.setText(message)
         msg.exec()
-
+        return msg
 
     def overlap_map(self):
         """plots the overlapping map of our method"""
@@ -390,9 +396,35 @@ class DroneSurveyingPlanning:
         try:
             self.run_function()
         except RadioButtonError:
-            self.show_popup("You must select both Planning Parameters and a Model for Accuracy Prediction")
+            self.show_popup(
+                title="ERROR",
+                message="You must select both Planning Parameters and a Model for Accuracy Prediction"
+            )
         except UnfilledError:
-            self.show_popup("Fill all input parameters")
+            self.show_popup(
+                title="ERROR",
+                message="Fill all input parameters"
+            )
+        except DroneShootingMaxSpeedError:
+            self.show_popup(
+                title="ERROR",
+                message="The required drone speed is bigger than the maximum speed.\n" +
+                        "Please choose a drone with bigger UAS Max. Speed."
+            )
+
+        except DroneAltitudeError:
+            self.show_popup(
+                title="ERROR",
+                message="The flight height is bigger than the drone maximum flight height.\n" +
+                        "Please choose a drone with higher Max. Altitude or a lower Flight Height."
+            )
+
+        except DroneBatteryError:
+            self.show_popup(
+                title="ERROR",
+                message="The drone battery is not enough to cover the flight path." +
+                        "Please choose a drone with a longer Battery Duration."
+            )
 
     def run_function(self):
 
@@ -433,7 +465,6 @@ class DroneSurveyingPlanning:
             except ZeroDivisionError:
                 raise UnfilledError
 
-
         elif self.dlg.Simulation.isChecked():
             if self.dlg.cb_density_s.currentText() == "Low":
                 delta = min(Y, X) / 15  # number of points we want on the smaller axis
@@ -450,10 +481,15 @@ class DroneSurveyingPlanning:
             pass
         else:
             raise RadioButtonError
+
+        progress = ProgressMsg(parent=self.dlg)
+        progress.show()
         try:
             self.method.algorithm()
         except ZeroDivisionError:
             raise UnfilledError
+        finally:
+            progress.close()
         self.open_DSPoutputs_dialog()
 
 
@@ -478,3 +514,6 @@ class DroneSurveyingPlanning:
             # substitute with your code.
             pass
 
+if __name__ == "__main__":
+    win = DroneSurveyingPlanning()
+    win.run()

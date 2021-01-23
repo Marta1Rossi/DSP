@@ -6,10 +6,20 @@ import scipy.sparse.linalg
 import matplotlib.pyplot as plt
 
 
+class DroneBatteryError(ValueError):
+    pass
+
+class DroneShootingMaxSpeedError(ValueError):
+    pass
+
+class DroneAltitudeError(ValueError):
+    pass
+
 class PredictionMethod:
     def __init__(self, drone, sensor, X, Y, h, Rl, Rt, scoll, delta):
         # Input-----------------------------------------------------------------------
         # camera parameters
+
         self.X = X
         self.Y = Y
         self.h = h
@@ -17,8 +27,10 @@ class PredictionMethod:
         self.Rt = Rt / 100.
         self.scoll = scoll
 
-        self.shooting_int = sensor['ShootInterval']
-        self.UAS_v = drone['MaxSpeed']
+        self.shooting_int = sensor['ShootInterval']  # [s]
+        self.UAS_v = drone['MaxSpeed']  # [km/h]
+        self.battery = drone['Battery'] * 60  # [s]
+        self.UAS_maxAltitude = drone['MaxAltitude']  # [m]
         self.c = sensor['FocalLength']  # [mm]
         self.fw = sensor['SizeX']       # [mm]
         self.fh = sensor['SizeY']       # [mm]
@@ -30,8 +42,8 @@ class PredictionMethod:
         self.delta = delta  # resolution of the ground point grid [m]
 
         # compute parameters ---------------------------------------------------------
-        self.W = self.fw*h / self.c     # footprint width  [m]
-        self.H = self.fh*h / self.c     # footprint height [m]
+        self.W = self.fw*self.h / self.c     # footprint width  [m]
+        self.H = self.fh*self.h / self.c     # footprint height [m]
         self.GSDw = self.W / self.npx   # GSD              [m]
         self.GSDh = self.H / self.npy   # GSD (check)      [m]
 
@@ -41,11 +53,28 @@ class PredictionMethod:
         self.nstrip_y = np.ceil(Y/self.b)   # number of strips in y
         self.nstrip_x = np.ceil(X/self.interaxie)   # number of strips in x
 
+        flpath_length = self.X + self.Y * (self.nstrip_x + 1)
+
         self.num_images = self.nstrip_y * self.nstrip_x  # total expected number of images (in both directions)
 
         self.pixel_size = self.fw / self.npx    # pixel size [mm]
 
-        self.UAS_v_min = self.b / self.shooting_int # UAS min speed compliant with shooting interval
+        if self.h > self.UAS_maxAltitude:
+            # if the selected height of the drone is too big for that drone an error is raised
+            raise DroneAltitudeError
+
+        if np.floor(self.b / self.shooting_int) < float(self.UAS_v) / 3.6:
+            if flpath_length / self.battery < float(self.UAS_v) / 3.6:
+                # UAS min speed compliant with shooting interval
+                self.UAS_v_min = max(self.b / self.shooting_int, flpath_length / self.battery)
+            else:
+                # if the length is too big for the battery duration an error is raised
+                raise DroneBatteryError
+        else:
+            # if the drone max speed is not enough to cover the baseline according to the shooting interval
+            # an error is raised
+            raise DroneShootingMaxSpeedError
+
 
         self.max_distance = self.UAS_v * 60 * self.UAS_v_min    # max distance covered [m]
         self.max_distance_proj = self.nstrip_x * self.b * self.nstrip_y + self.b * self.interaxie   # max distance in project [m]
@@ -107,8 +136,8 @@ class PredictionMethod:
         ax11.plot(x_rect, y_rect, 'r')
         ax11.axis('equal')
         im = ax11.imshow(self.Over_y, extent=[0, self.X, 0, self.Y])
-        ax11.plot(self.Xo, self.Yo, '.k')
-        ax11.plot(self.flpath[:, 0], self.flpath[:, 1], 'r')
+        ax11.plot(self.Xo, self.Yo, '.k', markersize=0.5)
+        ax11.plot(self.flpath[:, 0], self.flpath[:, 1], 'r', linewidth=0.5)
         fig.colorbar(im, ax=ax11)
         ax11.set_title("Longitudinal Overlapping")
 
@@ -116,8 +145,8 @@ class PredictionMethod:
         ax12.plot(x_rect, y_rect, 'r')
         ax12.axis('equal')
         im = ax12.imshow(self.Over_x, extent=[0, self.X, 0, self.Y])
-        ax12.plot(self.Xo, self.Yo, '.k')
-        ax12.plot(self.flpath[:, 0], self.flpath[:, 1], 'r')
+        ax12.plot(self.Xo, self.Yo, '.k', markersize=0.5)
+        ax12.plot(self.flpath[:, 0], self.flpath[:, 1], 'r', linewidth=0.5)
         fig.colorbar(im, ax=ax12)
         ax12.set_title("Transversal Overlapping")
 
@@ -125,8 +154,8 @@ class PredictionMethod:
         ax21.plot(x_rect, y_rect, 'r')
         ax21.axis('equal')
         im = ax21.imshow(self.Over_x + self.Over_y, extent=[0, self.X, 0, self.Y])
-        ax21.plot(self.Xo, self.Yo, '.k')
-        ax21.plot(self.flpath[:, 0], self.flpath[:, 1], 'r')
+        ax21.plot(self.Xo, self.Yo, '.k', markersize=0.5)
+        ax21.plot(self.flpath[:, 0], self.flpath[:, 1], 'r', linewidth=0.5)
         fig.colorbar(im, ax=ax21)
         ax21.set_title("Overlapping map")
 
@@ -147,8 +176,8 @@ class NormalCaseMethod(PredictionMethod):
         plt.plot(x_rect, y_rect, 'r')
         plt.axis('equal')
         im = plt.imshow(self.sz1, extent=[0, self.X, 0, self.Y])
-        plt.plot(self.Xo, self.Yo, '.k')
-        plt.plot(self.flpath[:, 0], self.flpath[:, 1], 'r')
+        plt.plot(self.Xo, self.Yo, '.k', markersize=0.5)
+        plt.plot(self.flpath[:, 0], self.flpath[:, 1], 'r', linewidth=0.5)
         plt.colorbar(im)
         plt.title("Estimated error [mm] - NC - sigma_z")
         plt.show()
@@ -172,65 +201,69 @@ class SimulationMethod(PredictionMethod):
         super(SimulationMethod, self).__init__(drone, sensor, X, Y, h, Rl, Rt, scoll, delta)
 
     def plot_error(self):
-        fig, ((ax11, ax12), (ax21, ax22), (ax31, ax32)) = plt.subplots(nrows=3, ncols=2)
+        fig1, ((ax111, ax112), (ax121, ax122)) = plt.subplots(nrows=2, ncols=2)
+        fig2, ((ax211, ax212), (ax221, ax222)) = plt.subplots(nrows=2, ncols=2)
         x_rect = np.array([0, self.X, self.X, 0, 0])
         y_rect = np.array([0, 0, self.Y, self.Y, 0])
 
         # LS sigma-z (theoretical)
-        ax11.plot(x_rect, y_rect, 'r')
-        ax11.axis('equal')
-        im = ax11.imshow(self.sz2, extent=[0, self.X, 0, self.Y])
-        ax11.plot(self.Xo, self.Yo, '.k')
-        ax11.plot(self.flpath[:, 0], self.flpath[:, 1], 'r')
-        fig.colorbar(im, ax=ax11)
-        ax11.set_title("Estimated error [mm] - LS σz (theor)",fontsize=8)
+        ax111.plot(x_rect, y_rect, 'r')
+        ax111.axis('equal')
+        im = ax111.imshow(self.sz2, extent=[0, self.X, 0, self.Y])
+        ax111.plot(self.Xo, self.Yo, '.k', markersize=0.5)
+        ax111.plot(self.flpath[:, 0], self.flpath[:, 1], 'r', linewidth=0.5)
+        fig1.colorbar(im, ax=ax111)
+        ax111.set_title("Estimated error [mm] - LS σz (theor)", fontsize=8)
 
         # LS sigma-z (empirical)
-        ax12.plot(x_rect, y_rect, 'r')
-        ax12.axis('equal')
-        im = ax12.imshow(self.sz3, extent=[0, self.X, 0, self.Y])
-        ax12.plot(self.Xo, self.Yo, '.k')
-        ax12.plot(self.flpath[:, 0], self.flpath[:, 1], 'r')
-        fig.colorbar(im, ax=ax12)
-        ax12.set_title("Estimated error [mm] - LS σz (emp)",fontsize=8)
+        ax211.plot(x_rect, y_rect, 'r')
+        ax211.axis('equal')
+        im = ax211.imshow(self.sz3, extent=[0, self.X, 0, self.Y])
+        ax211.plot(self.Xo, self.Yo, '.k', markersize=0.5)
+        ax211.plot(self.flpath[:, 0], self.flpath[:, 1], 'r', linewidth=0.5)
+        fig2.colorbar(im, ax=ax211)
+        ax211.set_title("Estimated error [mm] - LS σz (emp)", fontsize=8)
 
         # LS sigma-x (theoretical)
-        ax21.plot(x_rect, y_rect, 'r')
-        ax21.axis('equal')
-        im = ax21.imshow(self.sx2, extent=[0, self.X, 0, self.Y])
-        ax21.plot(self.Xo, self.Yo, '.k')
-        ax21.plot(self.flpath[:, 0], self.flpath[:, 1], 'r')
-        fig.colorbar(im, ax=ax21)
-        ax21.set_title("Estimated error [mm] - LS σx (theor)",fontsize=8)
+        ax112.plot(x_rect, y_rect, 'r')
+        ax112.axis('equal')
+        im = ax112.imshow(self.sx2, extent=[0, self.X, 0, self.Y])
+        ax112.plot(self.Xo, self.Yo, '.k', markersize=0.5)
+        ax112.plot(self.flpath[:, 0], self.flpath[:, 1], 'r', linewidth=0.5)
+        fig1.colorbar(im, ax=ax112)
+        ax112.set_title("Estimated error [mm] - LS σx (theor)", fontsize=8)
 
         # LS sigma-x (empirical)
-        ax22.plot(x_rect, y_rect, 'r')
-        ax22.axis('equal')
-        im = ax22.imshow(self.sx3, extent=[0, self.X, 0, self.Y])
-        ax22.plot(self.Xo, self.Yo, '.k')
-        ax22.plot(self.flpath[:, 0], self.flpath[:, 1], 'r')
-        fig.colorbar(im, ax=ax22)
-        ax22.set_title("Estimated error [mm] - LS σx (emp)",fontsize=8)
+        ax212.plot(x_rect, y_rect, 'r')
+        ax212.axis('equal')
+        im = ax212.imshow(self.sx3, extent=[0, self.X, 0, self.Y])
+        ax212.plot(self.Xo, self.Yo, '.k', markersize=0.5)
+        ax212.plot(self.flpath[:, 0], self.flpath[:, 1], 'r', linewidth=0.5)
+        fig2.colorbar(im, ax=ax212)
+        ax212.set_title("Estimated error [mm] - LS σx (emp)", fontsize=8)
 
         # LS sigma-y (theoretical)
-        ax31.plot(x_rect, y_rect, 'r')
-        ax31.axis('equal')
-        im = ax31.imshow(self.sy2, extent=[0, self.X, 0, self.Y])
-        ax31.plot(self.Xo, self.Yo, '.k')
-        ax31.plot(self.flpath[:, 0], self.flpath[:, 1], 'r')
-        fig.colorbar(im, ax=ax31)
-        ax31.set_title("Estimated error [mm] - LS σy (theor)",fontsize=8)
+        ax121.plot(x_rect, y_rect, 'r')
+        ax121.axis('equal')
+        im = ax121.imshow(self.sy2, extent=[0, self.X, 0, self.Y])
+        ax121.plot(self.Xo, self.Yo, '.k', markersize=0.5)
+        ax121.plot(self.flpath[:, 0], self.flpath[:, 1], 'r', linewidth=0.5)
+        fig1.colorbar(im, ax=ax121)
+        ax121.set_title("Estimated error [mm] - LS σy (theor)", fontsize=8)
 
         # LS sigma-y (empirical)
-        ax32.plot(x_rect, y_rect, 'r')
-        ax32.axis('equal')
-        im = ax32.imshow(self.sy3, extent=[0, self.X, 0, self.Y])
-        ax32.plot(self.Xo, self.Yo, '.k')
-        ax32.plot(self.flpath[:, 0], self.flpath[:, 1], 'r')
-        fig.colorbar(im, ax=ax32)
-        ax32.set_title("Estimated error [mm] - LS σy (emp)",fontsize=8)
+        ax221.plot(x_rect, y_rect, 'r')
+        ax221.axis('equal')
+        im = ax221.imshow(self.sy3, extent=[0, self.X, 0, self.Y])
+        ax221.plot(self.Xo, self.Yo, '.k', markersize=0.5)
+        ax221.plot(self.flpath[:, 0], self.flpath[:, 1], 'r', linewidth=0.5)
+        fig2.colorbar(im, ax=ax221)
+        ax221.set_title("Estimated error [mm] - LS σy (emp)", fontsize=8)
 
-        fig.tight_layout(pad=2.0)
+        fig1.delaxes(ax122)
+        fig2.delaxes(ax222)
+        fig1.tight_layout(pad=2)
+        fig2.tight_layout(pad=2)
         plt.show()
 
     def algorithm(self):
