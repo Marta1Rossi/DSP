@@ -2,20 +2,20 @@
    "DroneList": [
 	{
 	 	"DroneName": "Pioneer",
-    		"MaxAltitude": 40,
-    		"MaxSpeed": 30,
-    		"Battery": "50" },
+    	"MaxAltitude": 40,
+    	"MaxSpeed": 30,
+    	"Battery": 50 },
 
 	{	
 	 	"DroneName": "Grey Eagle",
-    		"MaxAltitude": 30,
-    		"MaxSpeed": 20,
-    		"Battery": "40" },
+    	"MaxAltitude": 30,
+    	"MaxSpeed": 20,
+    	"Battery": 40},
 	 	
 	{	"DroneName": "Sentinel",
-    		"MaxAltitude": 20,
-    		"MaxSpeed": 30,
-    		"Battery": "45"}
+    	"MaxAltitude": 20,
+    	"MaxSpeed": 30,
+    	"Battery": 45}
 
 		]
 }

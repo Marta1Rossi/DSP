@@ -11,7 +11,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_Dialog(object):
     def setupUi(self, Dialog):
         Dialog.setObjectName("Dialog")
-        Dialog.resize(771, 466)
+        Dialog.resize(771, 485)
         self.label_9 = QtWidgets.QLabel(Dialog)
         self.label_9.setGeometry(QtCore.QRect(320, 10, 271, 20))
         font = QtGui.QFont()
@@ -240,6 +240,39 @@ class Ui_Dialog(object):
         font.setWeight(75)
         self.label_15.setFont(font)
         self.label_15.setObjectName("label_15")
+        self.h = QtWidgets.QLabel(Dialog)
+        self.h.setGeometry(QtCore.QRect(230, 260, 91, 21))
+        self.h.setAutoFillBackground(False)
+        self.h.setStyleSheet("background-color: rgb(255, 255, 255);\n"
+"border: 1px solid black;\n"
+"")
+        self.h.setText("")
+        self.h.setObjectName("h")
+        self.label_4 = QtWidgets.QLabel(Dialog)
+        self.label_4.setGeometry(QtCore.QRect(220, 240, 131, 16))
+        self.label_4.setObjectName("label_4")
+        self.Rl = QtWidgets.QLabel(Dialog)
+        self.Rl.setGeometry(QtCore.QRect(390, 260, 91, 21))
+        self.Rl.setAutoFillBackground(False)
+        self.Rl.setStyleSheet("background-color: rgb(255, 255, 255);\n"
+"border: 1px solid black;\n"
+"")
+        self.Rl.setText("")
+        self.Rl.setObjectName("Rl")
+        self.label_16 = QtWidgets.QLabel(Dialog)
+        self.label_16.setGeometry(QtCore.QRect(380, 240, 131, 16))
+        self.label_16.setObjectName("label_16")
+        self.Rt = QtWidgets.QLabel(Dialog)
+        self.Rt.setGeometry(QtCore.QRect(570, 260, 91, 21))
+        self.Rt.setAutoFillBackground(False)
+        self.Rt.setStyleSheet("background-color: rgb(255, 255, 255);\n"
+"border: 1px solid black;\n"
+"")
+        self.Rt.setText("")
+        self.Rt.setObjectName("Rt")
+        self.label_17 = QtWidgets.QLabel(Dialog)
+        self.label_17.setGeometry(QtCore.QRect(560, 240, 131, 16))
+        self.label_17.setObjectName("label_17")
 
         self.retranslateUi(Dialog)
         QtCore.QMetaObject.connectSlotsByName(Dialog)
@@ -271,4 +304,7 @@ class Ui_Dialog(object):
         self.pb_overlap.setText(_translate("Dialog", "Plot"))
         self.tb_browse.setText(_translate("Dialog", "..."))
         self.label_15.setText(_translate("Dialog", "Export:"))
+        self.label_4.setText(_translate("Dialog", "h"))
+        self.label_16.setText(_translate("Dialog", "Rl"))
+        self.label_17.setText(_translate("Dialog", "Rt"))
 

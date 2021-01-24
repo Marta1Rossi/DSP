@@ -4,6 +4,7 @@ from numpy.random import randn
 from scipy.sparse import csr_matrix
 import scipy.sparse.linalg
 import matplotlib.pyplot as plt
+import sys
 
 
 class DroneBatteryError(ValueError):
@@ -16,22 +17,23 @@ class DroneAltitudeError(ValueError):
     pass
 
 class PredictionMethod:
-    def __init__(self, drone, sensor, X, Y, h, Rl, Rt, scoll, delta):
+    def __init__(self, drone, sensor, X, Y, h_list, Rl_list, Rt_list, scoll, delta):
         # Input-----------------------------------------------------------------------
         # camera parameters
-
         self.X = X
         self.Y = Y
-        self.h = h
-        self.Rl = Rl / 100.
-        self.Rt = Rt / 100.
+        self.h_list = h_list
+        self.Rl_list = Rl_list
+        self.Rt_list = Rt_list
         self.scoll = scoll
 
-        self.shooting_int = sensor['ShootInterval']  # [s]
+        self.drone_name = drone["DroneName"]
+        self.UAS_maxAltitude = drone['MaxAltitude']  # [m]
         self.UAS_v = drone['MaxSpeed']  # [km/h]
         self.battery = drone['Battery'] * 60  # [s]
-        self.UAS_maxAltitude = drone['MaxAltitude']  # [m]
+        self.sensor_name = sensor["SensorName"]
         self.c = sensor['FocalLength']  # [mm]
+        self.shooting_int = sensor['ShootInterval']  # [s]
         self.fw = sensor['SizeX']       # [mm]
         self.fh = sensor['SizeY']       # [mm]
         self.npx = sensor['ImgSizeX']   # [px]
@@ -41,17 +43,43 @@ class PredictionMethod:
         #will be a function based on points density chosen by the user
         self.delta = delta  # resolution of the ground point grid [m]
 
+        '''best_sz = 1e15  # a very big number
+        for h in self.h_list:
+            for Rl in Rl_list:
+                for Rt in Rt_list:
+                    self.setup(h=h, Rl=Rl, Rt=Rt)
+                    curr_sz = self.algorithm()  #curr_sz is the biggest sz of that algorithm
+                    if curr_sz < best_sz:
+                        best_sz = curr_sz
+                        best_h = h
+                        best_Rt = Rl
+                        best_Rl = Rl
+        self.h = best_h
+        self.Rl = best_Rl
+        self.Rt = best_Rt
+        self.setup(h=self.h, Rl=self.Rl, Rt=self.Rt)
+        self.algorithm()'''
+        self.h = h_list[0]
+        self.Rl = Rl_list[0]
+        self.Rt = Rt_list[0]
+        self.setup(h=self.h, Rl=self.Rl, Rt=self.Rt)
+        self.algorithm()
+
+    def setup(self, h, Rl, Rt):
+        self.current_h = h
+        self.current_Rl = Rl / 100.
+        self.current_Rt = Rt / 100.
         # compute parameters ---------------------------------------------------------
-        self.W = self.fw*self.h / self.c     # footprint width  [m]
-        self.H = self.fh*self.h / self.c     # footprint height [m]
+        self.W = self.fw*self.current_h / self.c     # footprint width  [m]
+        self.H = self.fh*self.current_h / self.c     # footprint height [m]
         self.GSDw = self.W / self.npx   # GSD              [m]
         self.GSDh = self.H / self.npy   # GSD (check)      [m]
 
-        self.b = (1-self.Rl) * self.H   # baseline
-        self.interaxie = (1-self.Rt) * self.W   # interaxie
+        self.b = (1 - self.current_Rl) * self.H   # baseline
+        self.interaxie = (1 - self.current_Rt) * self.W   # interaxie
 
-        self.nstrip_y = np.ceil(Y/self.b)   # number of strips in y
-        self.nstrip_x = np.ceil(X/self.interaxie)   # number of strips in x
+        self.nstrip_y = np.ceil(self.Y / self.b)   # number of strips in y
+        self.nstrip_x = np.ceil(self.X / self.interaxie)   # number of strips in x
 
         flpath_length = self.X + self.Y * (self.nstrip_x + 1)
 
@@ -59,7 +87,7 @@ class PredictionMethod:
 
         self.pixel_size = self.fw / self.npx    # pixel size [mm]
 
-        if self.h > self.UAS_maxAltitude:
+        if self.current_h > self.UAS_maxAltitude:
             # if the selected height of the drone is too big for that drone an error is raised
             raise DroneAltitudeError
 
@@ -80,31 +108,31 @@ class PredictionMethod:
         self.max_distance_proj = self.nstrip_x * self.b * self.nstrip_y + self.b * self.interaxie   # max distance in project [m]
 
         # adapt the estimated parameters to uniformly cover the area
-        self.b_real = Y / self.nstrip_y    # real baseline
-        self.i_real = X / self.nstrip_x    # real interaxie
+        self.b_real = self.Y / self.nstrip_y    # real baseline
+        self.i_real = self.X / self.nstrip_x    # real interaxie
         self.Rl_real = 1 - self.b_real/self.H   # real longitudinal overlapping
         self.Rt_real = 1 - self.i_real/self.W   # real transversal overlapping
 
         # determine the position of camera acquisition
-        self.xo = np.arange(self.i_real/2, X, self.i_real)         # [m]
-        self.yo = np.arange(self.b_real/2, Y, self.b_real)         # [m]
+        self.xo = np.arange(self.i_real/2, self.X, self.i_real)         # [m]
+        self.yo = np.arange(self.b_real/2, self.Y, self.b_real)         # [m]
         self.Xo, self.Yo = np.meshgrid(self.xo, self.yo)           # grid of coordinates   [m]
-        self.Zo = h                                                # height of acquisition [m]
+        self.Zo = self.current_h                                        # height of acquisition [m]
 
         # compute the flight path (sort the couple x and y according to the drone path
         self.nstrip_x = self.nstrip_x.astype(np.int64)
         self.nstrip_y = self.nstrip_y.astype(np.int64)
-        self.flpath = np.zeros((self.nstrip_x*self.nstrip_y, 2))  # [Xo, Yo]
+        self.flpath = np.zeros((self.nstrip_x * self.nstrip_y, 2))  # [Xo, Yo]
         for i in range(self.nstrip_x):
-            self.flpath[i*self.nstrip_y:(i+1)*self.nstrip_y, 0] = self.xo[i]    # [Xo]
+            self.flpath[i*self.nstrip_y: (i+1)*self.nstrip_y, 0] = self.xo[i]    # [Xo]
             if i % 2 == 1:                                  # [Yo]
-                self.flpath[i*self.nstrip_y:(i+1)*self.nstrip_y, 1] = np.flipud(self.yo)
+                self.flpath[i*self.nstrip_y: (i+1)*self.nstrip_y, 1] = np.flipud(self.yo)
             else:
-                self.flpath[i*self.nstrip_y:(i+1)*self.nstrip_y, 1] = self.yo
+                self.flpath[i*self.nstrip_y: (i+1)*self.nstrip_y, 1] = self.yo
 
         # define the grid of ground points -------------------------------------------
-        self.xGrid = np.arange(self.delta/2, X, self.delta)                   # vector of x
-        self.yGrid = np.arange(self.delta/2, Y, self.delta)                   # vector of y coordinates
+        self.xGrid = np.arange(self.delta/2, self.X, self.delta)                   # vector of x
+        self.yGrid = np.arange(self.delta/2, self.Y, self.delta)                   # vector of y coordinates
         self.XGrid, self.YGrid = np.meshgrid(self.xGrid, self.yGrid)               # matrices of all coordinates (couples x and y)
         self.ptName = np.arange(len(self.XGrid[0])*len(self.YGrid)).reshape((len(self.YGrid), len(self.XGrid[0])), order='F')     #index ("name") of each point (to be used in the simulation)
 
@@ -163,11 +191,15 @@ class PredictionMethod:
         fig.tight_layout(pad=2.0)
         plt.show()
 
+    def algorithm(self):
+        raise NotImplementedError
+
 
 class NormalCaseMethod(PredictionMethod):
 
     def __init__(self, drone, sensor, X, Y, h, Rl, Rt, scoll, delta):
         super().__init__(drone, sensor, X, Y, h, Rl, Rt, scoll, delta)
+        self.method_name = "Normal Case"
 
     def plot_error(self):
         x_rect = np.array([0, self.X, self.X, 0, 0])
@@ -186,19 +218,22 @@ class NormalCaseMethod(PredictionMethod):
 
         # error map (derived from overlapping map) -----------------------------------
         self.s2px = 2 * (self.scoll*self.fw/self.npx)**2                      #  sigma2 of the parallax (propagating the sigma of collimation) [mm^2]
-        self.s2zy = (self.h**2 / (self.c*1e-3 * self.i_real))**2 * self.s2px  #  sigma2 of the computed z considering longitudinal overlapping [mm^2]
-        self.s2zx = (self.h**2 / (self.c*1e-3 * self.b_real))**2 * self.s2px  #  sigma2 of the computed z considering transversal overlapping  [mm^2]
+        self.s2zy = (self.current_h**2 / (self.c*1e-3 * self.i_real))**2 * self.s2px  #  sigma2 of the computed z considering longitudinal overlapping [mm^2]
+        self.s2zx = (self.current_h**2 / (self.c*1e-3 * self.b_real))**2 * self.s2px  #  sigma2 of the computed z considering transversal overlapping  [mm^2]
 
         # propagate s2zx and s2zy
         self.sz1 = np.sqrt(
             ((self.s2zy * (self.Over_y - 1) + self.s2zx * (self.Over_x - 1)) / ((self.Over_y - 1) + (self.Over_x - 1))**2)
         )
 
+        return np.max(self.sz1)
+
 
 class SimulationMethod(PredictionMethod):
 
     def __init__(self, drone, sensor, X, Y, h, Rl, Rt, scoll, delta):
         super(SimulationMethod, self).__init__(drone, sensor, X, Y, h, Rl, Rt, scoll, delta)
+        self.method_name = "Simulation (without DTM)"
 
     def plot_error(self):
         fig1, ((ax111, ax112), (ax121, ax122)) = plt.subplots(nrows=2, ncols=2)
@@ -279,13 +314,12 @@ class SimulationMethod(PredictionMethod):
         for i in range(self.nstrip_x):
             for j in range(self.nstrip_y):
                 # compute image coordinates for all the points
-                xsiGrid = (self.XGrid - self.Xo[i][j]) / self.h * self.c   # [mm]
-                etaGrid = (self.YGrid - self.Yo[i][j]) / self.h * self.c   # [mm]
+                xsiGrid = (self.XGrid - self.Xo[i][j]) / self.current_h * self.c   # [mm]
+                etaGrid = (self.YGrid - self.Yo[i][j]) / self.current_h * self.c   # [mm]
                 # filter point inside the image plane
                 mask1 = np.abs(xsiGrid) <= np.float(self.fw)/2
                 mask2 = np.abs(etaGrid) <= np.float(self.fh)/2
                 mask = mask1.astype(int) * mask2.astype(int)
-                cont = 0
 
                 # store the observations
                 pt_obs.append(self.ptName[mask[:]==1])
@@ -409,6 +443,8 @@ class SimulationMethod(PredictionMethod):
         self.sx3 = np.reshape(s3[0: n_pt], self.XGrid.shape) * 1e3             # [mm]
         self.sy3 = np.reshape(s3[n_pt: 2 * n_pt], self.XGrid.shape) * 1e3      # [mm]
         self.sz3 = np.reshape(s3[2 * n_pt: 3 * n_pt], self.XGrid.shape) * 1e3  # [mm]
+
+        return np.max(self.sz2)
 
         #invN = scipy.sparse.linalg.inv(N)
         #L = csr_matrix(np.linalg.cholesky(N.todense()))

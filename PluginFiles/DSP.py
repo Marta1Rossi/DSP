@@ -46,6 +46,9 @@ class RadioButtonError(AttributeError):
 class UnfilledError(Exception):
     pass
 
+class NoFileError(Exception):
+    pass
+
 #define new dialog windows
 class DroneDialog(QtWidgets.QDialog):
     def __init__(self, parent):
@@ -238,6 +241,7 @@ class DroneSurveyingPlanning:
         self.dlg.HelpPushButton.clicked.connect(self.open_DSPHELP_dialog)
         self.dlg.close_button.clicked.connect(self.dlg.close)
 
+
     def loadDrone(self):
         """Add the created new drone to the list of drones in main DSP dialog"""
         self.dlg.cb_drone.clear()
@@ -353,9 +357,63 @@ class DroneSurveyingPlanning:
         """plots the error map of our method"""
         self.method.plot_error()
 
+    def export_handler(self):
+        try:
+            self.ExportResults()
+        except NoFileError:
+            pass
+
+    def ExportResults(self):
+        """Export inputs and outputs results"""
+
+        fileName = str(QFileDialog.getSaveFileName(caption='Save file',
+                                                             filter=".csv")[0])
+
+        # Check if export path is empty:
+        if fileName is None:
+            raise NoFileError
+        # Check to make sure the file has the correct extension:
+        if '.csv' != fileName[-4:]:
+            fileName += '.csv'
+
+        file = open(fileName, 'w')
+
+        text = "User inputs: " \
+               "\n\n Drone parameters:" \
+               "\n Drone name, Max. Altitude [m], UAS Max Speed [km/h], Battery Duration [min]\n"\
+               + str(self.method.drone_name) + "," + str(self.method.UAS_maxAltitude)\
+               + "," + str(self.method.UAS_v) + "," + str(self.method.battery) +\
+                "\n\n Sensor parameters:"\
+                "\n Sensor name, Focal Lenght [mm], Shooting Interval [s], Sensor Size in X [mm]," \
+                "Sensor Size in Y [mm], Image Size in X [px], Image Size in Y [px]\n" \
+               + str(self.method.sensor_name) + "," + str(self.method.c) + "," + str(self.method.shooting_int) + "," \
+               + str(self.method.fw) + "," + str(self.method.fh) + "," + str(self.method.npx) + ","+ str(self.method.npy) +\
+                "\n\n Planning Parameters:"\
+                "\n Flight Height [m], Along TRack Overlapping [%], Cross Track Overlapping [%]\n" \
+               + str(self.method.h) + ","+ str(self.method.Rl) + ","+ str(self.method.Rt)+\
+                "\n\n Model for accuracy prediction:\n" + str(self.method.method_name) +\
+                "\n\n Collimation Error [px]:\n" + str(self.method.scoll) +\
+                "\n\n\n Flight parameters - outputs:"\
+                "\n\n GSDw [m], GSDh [m], " \
+                "Image Footprint Width [m], Image Footprint Height [m], Pixel Size [mm]," \
+                " UAS min speed [m/s], Max distance allowed [m], Max dist in project [m]," \
+                " Baseline [m], Real Baseline [m], Interaxie [m], Real interaxie [m]," \
+                " Number of stripes in X, Number of stripes in Y, Real Longitudinal Overlapping [%]," \
+                "Real Transversal Overlapping [%], Total number of images\n" + str(self.method.GSDw) + "," + str(self.method.GSDh) + "," +\
+                str(self.method.W) + "," + str(self.method.H) + "," + str(self.method.pixel_size) + "," + str(self.method.UAS_v_min)\
+                + "," + str(self.method.max_distance) + "," + str(self.method.max_distance_proj)\
+                + "," + str(self.method.b) + "," + str(self.method.b_real) + "," + str(self.method.interaxie)\
+                + "," + str(self.method.i_real) + "," + str(self.method.nstrip_x) + "," + str(self.method.nstrip_y)\
+                + "," + str(self.method.Rl_real) + "," + str(self.method.Rt_real) + "," + str(self.method.num_images)\
+
+        file.write(text)
+        file.close()
+
+
     def open_DSPoutputs_dialog(self):
         """Opens an outputs dialog containing the computed results"""
-        outputs = DSPoutputsDialog(parent=self.dlg)
+        self.outputs = DSPoutputsDialog(parent=self.dlg)
+        outputs = self.outputs
         outputs.ui.GSDw.setText("{:.4f}".format(self.method.GSDw))
         outputs.ui.GSDh.setText("{:.4f}".format(self.method.GSDh))
         outputs.ui.footprint_W.setText("{:.4f}".format(self.method.W))
@@ -373,8 +431,13 @@ class DroneSurveyingPlanning:
         outputs.ui.n_img.setText("{:.4f}".format(self.method.num_images))
         outputs.ui.Rl_real.setText("{:.4f}".format(self.method.Rl_real))
         outputs.ui.Rt_real.setText("{:.4f}".format(self.method.Rt_real))
+        outputs.ui.Rt.setText("{:.4f}".format(self.method.Rt))
+        outputs.ui.Rl.setText("{:.4f}".format(self.method.Rl))
+        outputs.ui.h.setText("{:.4f}".format(self.method.h))
         outputs.ui.pb_error.clicked.connect(self.error_map)
         outputs.ui.pb_overlap.clicked.connect(self.overlap_map)
+        outputs.ui.tb_browse.clicked.connect(self.export_handler)
+
         outputs.show()
 
     def unload(self):
@@ -439,19 +502,23 @@ class DroneSurveyingPlanning:
         Y = self.dlg.Ydim.value()
 
         if self.dlg.Manual.isChecked():
-            h = self.dlg.h.value()
-            Rl = self.dlg.Rl.value()
-            Rt = self.dlg.Rt.value()
+            h = [self.dlg.h.value()]
+            Rl = [self.dlg.Rl.value()]
+            Rt = [self.dlg.Rt.value()]
             if Rt == 0 or Rl == 0:
                 raise UnfilledError
 
-            
         elif self.dlg.Auto.isChecked():
-            pass
-            # TODO
+            h = [10., 20., 40.]
+            Rl = [70., 80., 90.]
+            Rt = [70., 80., 90.]
         else:
             raise RadioButtonError
+
         scoll = self.dlg.scoll.value()
+
+        progress = ProgressMsg(parent=self.dlg)
+        progress.show()
 
         if self.dlg.NormalCase.isChecked():
             if self.dlg.cb_density_n.currentText() == "Low":
@@ -464,6 +531,12 @@ class DroneSurveyingPlanning:
                 self.method = NormalCaseMethod(drone, sensor, X, Y, h, Rl, Rt, scoll, delta)
             except ZeroDivisionError:
                 raise UnfilledError
+            except RuntimeError:
+                x = DSPHELPDialog()
+                x.ui.text.setText(f"h = {self.method.current_h}\n Rl = {self.method.current_Rl}\n Rt = {self.method.current_Rt}")
+                x.show()
+            finally:
+                progress.close()
 
         elif self.dlg.Simulation.isChecked():
             if self.dlg.cb_density_s.currentText() == "Low":
@@ -476,20 +549,18 @@ class DroneSurveyingPlanning:
                 self.method = SimulationMethod(drone, sensor, X, Y, h, Rl, Rt, scoll, delta)
             except ZeroDivisionError:
                 raise UnfilledError
+            except RuntimeError:
+                x = DSPHELPDialog(self.dlg)
+                x.ui.text.setText(f"h = {self.method.current_h}\n Rl = {self.method.current_Rl}\n Rt = {self.method.current_Rt}")
+                x.show()
+            finally:
+                progress.close()
 
         elif self.dlg.DTM.isChecked():
             pass
         else:
             raise RadioButtonError
 
-        progress = ProgressMsg(parent=self.dlg)
-        progress.show()
-        try:
-            self.method.algorithm()
-        except ZeroDivisionError:
-            raise UnfilledError
-        finally:
-            progress.close()
         self.open_DSPoutputs_dialog()
 
 
