@@ -37,8 +37,19 @@ from .DSP_dialog import DroneSurveyingPlanningDialog
 from .NewDrone import Ui_Dialog as drone
 from .NewSensor import Ui_Dialog as sensor
 from .progress_msg import Ui_Dialog as progress_msg
-from .survey_planning import NormalCaseMethod, SimulationMethod, DroneShootingMaxSpeedError, DroneBatteryError, DroneAltitudeError
+from .survey_planning import (NormalCaseMethod,
+                              SimulationMethod,
+                              SimulationDTM,
+                              DroneShootingMaxSpeedError,
+                              DroneBatteryError,
+                              DroneAltitudeError)
 
+
+class NoDTMError(KeyError):
+    pass
+
+class NoSHPError(KeyError):
+    pass
 
 class RadioButtonError(AttributeError):
     pass
@@ -115,6 +126,9 @@ class DroneSurveyingPlanning:
         sensor_file = open(os.path.join(self.plugin_dir, 'listasensori.json'))
         self.sensor_list = json.load(sensor_file)['SensorList']
 
+        # this dictionaries will map the file name to the file path
+        self.dtm_list = dict()
+        self.shp_list = dict()
 
         # Create the dialog (after translation) and keep reference
         self.dlg = DroneSurveyingPlanningDialog()
@@ -270,6 +284,7 @@ class DroneSurveyingPlanning:
         for layer in layers:
             if layer.type() == QgsMapLayer.VectorLayer:
                 vector_layers.append(layer.name())
+                self.shp_list[layer.name()] = layer.source()  # maps the path to the file name
         self.dlg.cb_invector.addItems(vector_layers)
 
     def openVector(self):
@@ -277,17 +292,20 @@ class DroneSurveyingPlanning:
         inFile = str(QFileDialog.getOpenFileName(caption = "Open shapefile",
                                                  filter = "Shapefiles(*.shp)")[0])
         if inFile is not None:
-            self.iface.addVectorLayer(inFile, str.split(os.path.basename(inFile), ".")[0], "ogr")
+            self.file_name_shp = str.split(os.path.basename(inFile), ".")[0]
+        if inFile is not None:
+            self.iface.addVectorLayer(inFile, self.file_name_shp, "ogr")
             self.loadVectors()
 
     def loadDTM(self):
-        """Load DTMs from QGIS table of contents"""
+        """Load DTM from QGIS table of contents"""
         self.dlg.cb_inDTM.clear()
         layers = [layer for layer in QgsProject.instance().mapLayers().values()]
         DTM_layers = []
         for layer in layers:
             if layer.type() == QgsMapLayer.RasterLayer:
                 DTM_layers.append(layer.name())
+                self.dtm_list[layer.name()] = layer.source()  # maps the path to the file name
         self.dlg.cb_inDTM.addItems(DTM_layers)
 
     def openDTM(self):
@@ -295,7 +313,8 @@ class DroneSurveyingPlanning:
         inFile = str(QFileDialog.getOpenFileName(caption="Open DTM",
                                                  filter="GeoTiff(*.tif)")[0])
         if inFile is not None:
-            self.iface.addRasterLayer(inFile, str.split(os.path.basename(inFile), ".")[0])
+            self.file_name_d = str.split(os.path.basename(inFile), ".")[0]
+            self.iface.addRasterLayer(inFile, self.file_name_d)
             self.loadDTM()
 
     def open_drone_dialog(self):
@@ -463,6 +482,13 @@ class DroneSurveyingPlanning:
                 title="ERROR",
                 message="You must select both Planning Parameters and a Model for Accuracy Prediction"
             )
+        except NoDTMError:
+            self.show_popup(
+                title="ERROR",
+                message="You must insert a (valid) DTM to run the Simulation usign a DTM"
+            )
+        except NoSHPError:
+            pass  # to change if we want to use a shapefile
         except UnfilledError:
             self.show_popup(
                 title="ERROR",
@@ -474,14 +500,12 @@ class DroneSurveyingPlanning:
                 message="The required drone speed is bigger than the maximum speed.\n" +
                         "Please choose a drone with bigger UAS Max. Speed."
             )
-
         except DroneAltitudeError:
             self.show_popup(
                 title="ERROR",
                 message="The flight height is bigger than the drone maximum flight height.\n" +
                         "Please choose a drone with higher Max. Altitude or a lower Flight Height."
             )
-
         except DroneBatteryError:
             self.show_popup(
                 title="ERROR",
@@ -517,6 +541,7 @@ class DroneSurveyingPlanning:
 
         scoll = self.dlg.scoll.value()
 
+
         progress = ProgressMsg(parent=self.dlg)
         progress.show()
 
@@ -531,10 +556,6 @@ class DroneSurveyingPlanning:
                 self.method = NormalCaseMethod(drone, sensor, X, Y, h, Rl, Rt, scoll, delta)
             except ZeroDivisionError:
                 raise UnfilledError
-            except RuntimeError:
-                x = DSPHELPDialog()
-                x.ui.text.setText(f"h = {self.method.current_h}\n Rl = {self.method.current_Rl}\n Rt = {self.method.current_Rt}")
-                x.show()
             finally:
                 progress.close()
 
@@ -549,15 +570,29 @@ class DroneSurveyingPlanning:
                 self.method = SimulationMethod(drone, sensor, X, Y, h, Rl, Rt, scoll, delta)
             except ZeroDivisionError:
                 raise UnfilledError
-            except RuntimeError:
-                x = DSPHELPDialog(self.dlg)
-                x.ui.text.setText(f"h = {self.method.current_h}\n Rl = {self.method.current_Rl}\n Rt = {self.method.current_Rt}")
-                x.show()
             finally:
                 progress.close()
 
         elif self.dlg.DTM.isChecked():
-            pass
+            dtm_name = str(self.dlg.cb_inDTM.currentText())
+            shp_name = str(self.dlg.cb_invector.currentText())
+            try:
+                dtm = self.dtm_list[dtm_name]
+            except KeyError:
+                progress.close()
+                raise NoDTMError
+            '''try:
+                shp = self.shp_list[shp_name]
+            except KeyError:
+                raise NoSHPError
+            finally:
+                progress.close()'''
+            try:
+                self.method = SimulationDTM(drone, sensor, X, Y, h, Rl, Rt, scoll, dtm, '')
+            except ZeroDivisionError:
+                raise UnfilledError
+            finally:
+                progress.close()
         else:
             raise RadioButtonError
 

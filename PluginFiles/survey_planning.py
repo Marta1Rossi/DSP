@@ -4,8 +4,19 @@ from numpy.random import randn
 from scipy.sparse import csr_matrix
 import scipy.sparse.linalg
 import matplotlib.pyplot as plt
-import sys
+import gdal
+from qgis.PyQt.QtWidgets import QMessageBox
+import geopandas as gpd
+from shapely.geometry import Point
+#import cv2
 
+
+def show_popup(title, message):
+    msg = QMessageBox()
+    msg.setWindowTitle(title)
+    msg.setText(message)
+    msg.exec()
+    return msg
 
 class DroneBatteryError(ValueError):
     pass
@@ -48,6 +59,7 @@ class PredictionMethod:
             for Rl in Rl_list:
                 for Rt in Rt_list:
                     self.setup(h=h, Rl=Rl, Rt=Rt)
+                    self.setup_ground_points()
                     curr_sz = self.algorithm()  #curr_sz is the biggest sz of that algorithm
                     if curr_sz < best_sz:
                         best_sz = curr_sz
@@ -58,14 +70,16 @@ class PredictionMethod:
         self.Rl = best_Rl
         self.Rt = best_Rt
         self.setup(h=self.h, Rl=self.Rl, Rt=self.Rt)
+        self.setup_ground_points()
         self.algorithm()'''
         self.h = h_list[0]
         self.Rl = Rl_list[0]
         self.Rt = Rt_list[0]
-        self.setup(h=self.h, Rl=self.Rl, Rt=self.Rt)
+        self.setup_values(h=self.h, Rl=self.Rl, Rt=self.Rt)
+        self.setup_ground_points()
         self.algorithm()
 
-    def setup(self, h, Rl, Rt):
+    def setup_values(self, h, Rl, Rt):
         self.current_h = h
         self.current_Rl = Rl / 100.
         self.current_Rt = Rt / 100.
@@ -78,18 +92,20 @@ class PredictionMethod:
         self.b = (1 - self.current_Rl) * self.H   # baseline
         self.interaxie = (1 - self.current_Rt) * self.W   # interaxie
 
-        self.nstrip_y = np.ceil(self.Y / self.b)   # number of strips in y
-        self.nstrip_x = np.ceil(self.X / self.interaxie)   # number of strips in x
-
-        flpath_length = self.X + self.Y * (self.nstrip_x + 1)
-
-        self.num_images = self.nstrip_y * self.nstrip_x  # total expected number of images (in both directions)
-
         self.pixel_size = self.fw / self.npx    # pixel size [mm]
 
         if self.current_h > self.UAS_maxAltitude:
             # if the selected height of the drone is too big for that drone an error is raised
             raise DroneAltitudeError
+
+
+    def setup_ground_points(self):
+        self.nstrip_y = np.ceil(self.Y / self.b)  # number of strips in y
+        self.nstrip_x = np.ceil(self.X / self.interaxie)  # number of strips in x
+
+        flpath_length = self.X + self.Y * (self.nstrip_x + 1)
+
+        self.num_images = self.nstrip_y * self.nstrip_x  # total expected number of images (in both directions)
 
         if np.floor(self.b / self.shooting_int) < float(self.UAS_v) / 3.6:
             if flpath_length / self.battery < float(self.UAS_v) / 3.6:
@@ -103,20 +119,20 @@ class PredictionMethod:
             # an error is raised
             raise DroneShootingMaxSpeedError
 
-
-        self.max_distance = self.UAS_v * 60 * self.UAS_v_min    # max distance covered [m]
-        self.max_distance_proj = self.nstrip_x * self.b * self.nstrip_y + self.b * self.interaxie   # max distance in project [m]
+        self.max_distance = self.UAS_v * 60 * self.UAS_v_min  # max distance covered [m]
+        self.max_distance_proj = self.nstrip_x * self.b * self.nstrip_y + self.b * self.interaxie  # max distance in project [m]
 
         # adapt the estimated parameters to uniformly cover the area
-        self.b_real = self.Y / self.nstrip_y    # real baseline
-        self.i_real = self.X / self.nstrip_x    # real interaxie
-        self.Rl_real = 1 - self.b_real/self.H   # real longitudinal overlapping
-        self.Rt_real = 1 - self.i_real/self.W   # real transversal overlapping
+        self.b_real = self.Y / self.nstrip_y  # real baseline
+        self.i_real = self.X / self.nstrip_x  # real interaxie
+        self.Rl_real = 1 - self.b_real / self.H  # real longitudinal overlapping
+        self.Rt_real = 1 - self.i_real / self.W  # real transversal overlapping
 
         # determine the position of camera acquisition
         self.xo = np.arange(self.i_real/2, self.X, self.i_real)         # [m]
         self.yo = np.arange(self.b_real/2, self.Y, self.b_real)         # [m]
         self.Xo, self.Yo = np.meshgrid(self.xo, self.yo)           # grid of coordinates   [m]
+
         self.Zo = self.current_h                                        # height of acquisition [m]
 
         # compute the flight path (sort the couple x and y according to the drone path
@@ -303,7 +319,6 @@ class SimulationMethod(PredictionMethod):
 
     def algorithm(self):
         #########################simulation part ########################
-
         #  intitalize empty vectors
         pt_obs, im_obs, xsi_obs, eta_obs = ([] for i in range(4))
 
@@ -391,7 +406,7 @@ class SimulationMethod(PredictionMethod):
         A_transpose = A.transpose()
         N = A_transpose @ A
         # using LU decomposition and iteration
-        # this method is less compact, but we use tqdm's bar to check our progress
+        # this method is less compact, but the matrix was too big to be allocated
         lu = scipy.sparse.linalg.splu(N)
 
         x_coo = []   # x coordinate of non-zero values
@@ -454,6 +469,137 @@ class SimulationMethod(PredictionMethod):
         #invN = np.transpose(invL) @ invL
         #lu_obj = scipy.sparse.linalg.splu(N)
         #lu_obj.solve(np.eye(157500))
+
+
+class SimulationDTM(SimulationMethod):
+    def __init__(self, drone, sensor, X, Y, h, Rl, Rt, scoll, raster_out, shapefile_out):
+        self.raster_out = raster_out
+        self.shapefile_out = shapefile_out
+        super(SimulationDTM, self).__init__(drone, sensor, X, Y, h, Rl, Rt, scoll, delta=0)
+        self.method_name = "Simulation (with DTM)"
+
+    def setup_ground_points(self):
+        # Here we retrieve the area dimension X, Y
+        #gdf = gpd.read_file("C:\\Users\\Marta\\Desktop\\Geoinformatics_project\\diag.shp")  #self.shapefile_out
+        #gdf = cv2.imread(self.raster_out)
+        # information from the user shapefile
+        # getting user polygon`s points
+        # intiate variables
+        '''
+        x = []
+        y = []
+        # iteration through polygon`s points
+        for index, row in gdf.iterrows():
+            for pt in list(row['geometry'].exterior.coords):
+                xy = Point(pt)
+                x.append(xy.x)
+                y.append(xy.y)
+        # getting max and min for both x and y
+        max_x = max(x)
+        max_y = max(y)
+        min_x = min(x)
+        min_y = min(y)
+        self.X = max_x - min_x
+        self.Y = max_y - min_y
+        '''
+        '''
+            This function retrieves the values from the DTM and overwrites the simulated ground points
+        '''
+        fn = self.raster_out
+        ds = gdal.Open(fn)  # self.raster_out
+
+        Elev = ds.GetRasterBand(1).ReadAsArray()
+        # print(Elev.shape)
+        # no. of row and coloums
+        self.Y = Elev.shape[0]  # no of rows ("altezza")
+        self.X = Elev.shape[1]  # no of coloumns ("larghezza")
+        # print(ds.GetGeoTransform())
+        # print(ds.GetProjection())
+        # origin x_0, y_0
+        x_0 = ds.GetGeoTransform()[0]
+        Dem_res_x = np.abs(ds.GetGeoTransform()[1])  # dimensione pixel
+        y_0 = ds.GetGeoTransform()[3]
+        Dem_res_y = np.abs(ds.GetGeoTransform()[5])  # dimensione pixel
+        X_end = x_0 + Dem_res_x * self.X  # changed c_n cause I want "larghezza"
+        Y_end = y_0 + Dem_res_y * self.Y
+        self.nstrip_y = np.ceil(self.Y / self.b)  # number of strips in y
+        self.nstrip_x = np.ceil(self.X / self.interaxie)  # number of strips in x
+
+        flpath_length = self.X + self.Y * (self.nstrip_x + 1)  # for error checking
+
+        self.num_images = self.nstrip_y * self.nstrip_x  # total expected number of images (in both directions)
+
+        if np.floor(self.b / self.shooting_int) < float(self.UAS_v) / 3.6:
+            if flpath_length / self.battery < float(self.UAS_v) / 3.6:
+                # UAS min speed compliant with shooting interval
+                self.UAS_v_min = max(self.b / self.shooting_int, flpath_length / self.battery)
+            else:
+                # if the length is too big for the battery duration an error is raised
+                raise DroneBatteryError
+        else:
+            # if the drone max speed is not enough to cover the baseline according to the shooting interval
+            # an error is raised
+            raise DroneShootingMaxSpeedError
+
+        self.max_distance = self.UAS_v * 60 * self.UAS_v_min  # max distance covered [m]
+        self.max_distance_proj = self.nstrip_x * self.b * self.nstrip_y + self.b * self.interaxie  # max distance in project [m]
+
+        # adapt the estimated parameters to uniformly cover the area
+        self.b_real = (self.Y-y_0) / self.nstrip_y  # real baseline
+        self.i_real = (self.X-x_0) / self.nstrip_x  # real interaxie
+        self.Rl_real = 1 - self.b_real / self.H  # real longitudinal overlapping
+        self.Rt_real = 1 - self.i_real / self.W  # real transversal overlapping
+
+        # determine the position of camera acquisition
+        # moving origin of the acqusition to the bottom left corner of DEM
+        self.xo = np.arange(x_0 + self.i_real/2, self.X, self.i_real)          # [m]
+        self.yo = np.arange(y_0,  self.Y - self.b_real/2, self.b_real)         # [m]
+        self.yo = np.flipud(self.yo)
+        self.Xo, self.Yo = np.meshgrid(self.xo, self.yo)                       # grid of coordinates   [m]
+        #show_popup("debug", f"xo: {self.xo.shape}, yo: {self.yo.shape}")
+
+        # determine the position of camera acquisition: Zo
+        Elev[Elev == -32767.] = np.nan
+        self.Zo = np.nanmean(Elev)  # height of acquisition [m]
+        #show_popup("debug", f"Zo: {self.Zo}")
+
+        # compute the flight path (sort the couple x and y according to the drone path
+        self.nstrip_x = self.nstrip_x.astype(np.int64)
+        self.nstrip_y = self.nstrip_y.astype(np.int64)
+        self.flpath = np.zeros((self.nstrip_x * self.nstrip_y, 2))  # [Xo, Yo]
+        for i in range(self.nstrip_x):
+            self.flpath[i * self.nstrip_y: (i + 1) * self.nstrip_y, 0] = self.xo[i]  # [Xo]
+            if i % 2 == 1:  # [Yo]
+                self.flpath[i * self.nstrip_y: (i + 1) * self.nstrip_y, 1] = np.flipud(self.yo)
+            else:
+                self.flpath[i * self.nstrip_y: (i + 1) * self.nstrip_y, 1] = self.yo
+
+        # define the grid of ground points -------------------------------------------
+        self.xGrid = np.arange(x_0, X_end, Dem_res_x)  # vector of x
+        self.yGrid = np.arange(y_0, Y_end, Dem_res_y)  # vector of y coordinates
+        self.XGrid, self.YGrid = np.meshgrid(self.xGrid, self.yGrid)  # matrices of all coordinates (couples x and y)
+
+        self.ptName = np.arange(len(self.XGrid[0]) * len(self.YGrid)).reshape((len(self.YGrid), len(self.XGrid[0])),
+                                                                              order='F')  # index ("name") of each point (to be used in the simulation)
+
+        # overlapping map ------------------------------------------------------------
+        # map of the number of images from which each point is seen
+        # overlapping in y direction (vector) - longitudinal
+        over_y = np.zeros(len(self.yGrid))
+        for i in range(self.nstrip_y):
+            for j, val in enumerate(self.yGrid):
+                if val >= self.yo[i] - self.H / 2 and val <= self.yo[i] + self.H / 2:
+                    over_y[j] += 1
+
+        # overlapping in x direction (vector) - transversal
+        over_x = np.zeros(len(self.xGrid))
+        for i in range(self.nstrip_x):
+            for j, val in enumerate(self.xGrid):
+                if val >= self.xo[i] - self.W / 2 and val <= self.xo[i] + self.W / 2:
+                    over_x[j] += 1
+
+        # determine the overlapping maps
+        self.Over_x, self.Over_y = np.meshgrid(over_x, over_y)
 
 
 #method = SimulationMethod(drone, sensor, 150, 350, 40, 0.7, 0.7, 1, 4)

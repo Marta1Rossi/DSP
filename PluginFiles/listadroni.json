@@ -2,9 +2,9 @@
    "DroneList": [
 	{
 	 	"DroneName": "Pioneer",
-    	"MaxAltitude": 40,
-    	"MaxSpeed": 30,
-    	"Battery": 50 },
+    	"MaxAltitude": 99999,
+    	"MaxSpeed": 9999999,
+    	"Battery": 999999 },
 
 	{	
 	 	"DroneName": "Grey Eagle",
