@@ -40,7 +40,7 @@ from .progress_msg import Ui_Dialog as progress_msg
 from .survey_planning import (NormalCaseMethod,
                               SimulationMethod,
                               SimulationDTM,
-                              DroneShootingMaxSpeedError,
+                              DroneMaxSpeedError,
                               DroneBatteryError,
                               DroneAltitudeError)
 
@@ -133,7 +133,6 @@ class DroneSurveyingPlanning:
         # Create the dialog (after translation) and keep reference
         self.dlg = DroneSurveyingPlanningDialog()
 
-
         # Declare instance attributes
         self.actions = []
         self.menu = self.tr(u'&DSP')
@@ -141,7 +140,6 @@ class DroneSurveyingPlanning:
         # Check if plugin was started the first time in current QGIS session
         # Must be set in initGui() to survive plugin reloads
         self.first_start = None
-
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -157,7 +155,6 @@ class DroneSurveyingPlanning:
         """
         # noinspection PyTypeChecker,PyArgumentList,PyCallByClass
         return QCoreApplication.translate('DroneSurveyingPlanning', message)
-
 
     def add_action(
         self,
@@ -243,9 +240,9 @@ class DroneSurveyingPlanning:
             callback=self.run,
             parent=self.iface.mainWindow())
 
-        # will be set False in run()
         self.loadDrone()
         self.loadSensor()
+        # will be set False in run()
         self.first_start = True
         self.dlg.tb_invector.clicked.connect(self.openVector)
         self.dlg.tb_inDTM.clicked.connect(self.openDTM)
@@ -259,7 +256,6 @@ class DroneSurveyingPlanning:
     def loadDrone(self):
         """Add the created new drone to the list of drones in main DSP dialog"""
         self.dlg.cb_drone.clear()
-
         drone_combobox = []
         for drone in self.drone_list:
             drone_combobox.append(drone['DroneName'])
@@ -269,7 +265,6 @@ class DroneSurveyingPlanning:
     def loadSensor(self):
         """Add the created new sensor to the list of sensors in main DSP dialog"""
         self.dlg.cb_sensor.clear()
-
         sensor_combobox = []
         for sensor in self.sensor_list:
             sensor_combobox.append(sensor['SensorName'])
@@ -285,6 +280,7 @@ class DroneSurveyingPlanning:
             if layer.type() == QgsMapLayer.VectorLayer:
                 vector_layers.append(layer.name())
                 self.shp_list[layer.name()] = layer.source()  # maps the path to the file name
+
         self.dlg.cb_invector.addItems(vector_layers)
 
     def openVector(self):
@@ -293,19 +289,20 @@ class DroneSurveyingPlanning:
                                                  filter = "Shapefiles(*.shp)")[0])
         if inFile is not None:
             self.file_name_shp = str.split(os.path.basename(inFile), ".")[0]
-        if inFile is not None:
             self.iface.addVectorLayer(inFile, self.file_name_shp, "ogr")
             self.loadVectors()
 
     def loadDTM(self):
         """Load DTM from QGIS table of contents"""
         self.dlg.cb_inDTM.clear()
+
         layers = [layer for layer in QgsProject.instance().mapLayers().values()]
         DTM_layers = []
         for layer in layers:
             if layer.type() == QgsMapLayer.RasterLayer:
                 DTM_layers.append(layer.name())
                 self.dtm_list[layer.name()] = layer.source()  # maps the path to the file name
+
         self.dlg.cb_inDTM.addItems(DTM_layers)
 
     def openDTM(self):
@@ -318,14 +315,14 @@ class DroneSurveyingPlanning:
             self.loadDTM()
 
     def open_drone_dialog(self):
-        """Open dialog to create a new drone"""
+        """Open drone dialog to create a new drone"""
         self.droneDialog = DroneDialog(parent=self.dlg)
         self.droneDialog.ui.pb_okdrone.clicked.connect(self.collect_drone)
         self.droneDialog.ui.pb_close.clicked.connect(self.droneDialog.close)
         self.droneDialog.show()
 
     def collect_drone(self):
-        """Collect the new drone attributes """
+        """Collect the new drone attributes from drone dialog to main dialog"""
         new_drone = dict()
         new_drone['DroneName'] = self.droneDialog.ui.i_name.text()
         new_drone['MaxAltitude'] = self.droneDialog.ui.sb_altitude.value()
@@ -383,8 +380,7 @@ class DroneSurveyingPlanning:
             pass
 
     def ExportResults(self):
-        """Export inputs and outputs results"""
-
+        """Export inputs and outputs results as csv file"""
         fileName = str(QFileDialog.getSaveFileName(caption='Save file',
                                                              filter=".csv")[0])
 
@@ -427,7 +423,6 @@ class DroneSurveyingPlanning:
 
         file.write(text)
         file.close()
-
 
     def open_DSPoutputs_dialog(self):
         """Opens an outputs dialog containing the computed results"""
@@ -473,65 +468,52 @@ class DroneSurveyingPlanning:
                 return i
         return list_[0]
 
-
     def run_function_handler(self):
         try:
             self.run_function()
         except RadioButtonError:
-            self.show_popup(
-                title="ERROR",
-                message="You must select both Planning Parameters and a Model for Accuracy Prediction"
-            )
+            self.show_popup(title="ERROR",
+                            message="You must select both Planning Parameters and a Model for Accuracy Prediction")
         except NoDTMError:
-            self.show_popup(
-                title="ERROR",
-                message="You must insert a (valid) DTM to run the Simulation usign a DTM"
-            )
+            self.show_popup(title="ERROR",
+                            message="You must insert a (valid) DTM to run the Simulation-using-DTM method")
         except NoSHPError:
-            pass  # to change if we want to use a shapefile
+            self.show_popup(title="ERROR",
+                            message="You must insert a (valid) shapefile to run the Simulation-using-DTM method")
         except UnfilledError:
-            self.show_popup(
-                title="ERROR",
-                message="Fill all input parameters"
-            )
-        except DroneShootingMaxSpeedError:
-            self.show_popup(
-                title="ERROR",
-                message="The required drone speed is bigger than the maximum speed.\n" +
-                        "Please choose a drone with bigger UAS Max. Speed."
-            )
+            self.show_popup(title="ERROR", message="Fill all input parameters")
+
+        except DroneMaxSpeedError:
+            self.show_popup(title="ERROR", message="The required drone speed is bigger than the maximum speed.\n" +
+                        "Please choose a drone with bigger UAS Max. Speed.")
+
         except DroneAltitudeError:
-            self.show_popup(
-                title="ERROR",
-                message="The flight height is bigger than the drone maximum flight height.\n" +
-                        "Please choose a drone with higher Max. Altitude or a lower Flight Height."
-            )
+            self.show_popup(title="ERROR", message="The flight height is bigger than the drone maximum flight height.\n" +
+                        "Please choose a drone with higher Max. Altitude or a lower Flight Height.")
+
         except DroneBatteryError:
-            self.show_popup(
-                title="ERROR",
-                message="The drone battery is not enough to cover the flight path." +
-                        "Please choose a drone with a longer Battery Duration."
-            )
+            self.show_popup(title="ERROR", message="The drone battery is not enough to cover the flight path." +
+                        "Please choose a drone with a longer Battery Duration.")
 
     def run_function(self):
-
         drone = self.find_dict_in_list(list_=self.drone_list,
                                        key_name='DroneName',
                                        key_value=str(self.dlg.cb_drone.currentText()))
         sensor = self.find_dict_in_list(list_=self.sensor_list,
                                         key_name='SensorName',
                                         key_value=str(self.dlg.cb_sensor.currentText()))
+        # size of the surveyed area
+        X = self.dlg.Xdim.value()  # [m]
+        Y = self.dlg.Ydim.value()  # [m]
 
-        X = self.dlg.Xdim.value()
-        Y = self.dlg.Ydim.value()
-
+        # check if user choose "Manual" set of flight planning parameters
         if self.dlg.Manual.isChecked():
             h = [self.dlg.h.value()]
             Rl = [self.dlg.Rl.value()]
             Rt = [self.dlg.Rt.value()]
             if Rt == 0 or Rl == 0:
                 raise UnfilledError
-
+        # check if user choose "Automatic generation" of flight planning parameters
         elif self.dlg.Auto.isChecked():
             h = [10., 20., 40.]
             Rl = [70., 80., 90.]
@@ -539,12 +521,14 @@ class DroneSurveyingPlanning:
         else:
             raise RadioButtonError
 
-        scoll = self.dlg.scoll.value()
+        # accuracy in image collimation
+        scoll = self.dlg.scoll.value()  # [px]
 
-
+        # display progress message while running outputs computation
         progress = ProgressMsg(parent=self.dlg)
         progress.show()
 
+        # check the density for the simulated points and call the Normal Case model for accuracy prediction
         if self.dlg.NormalCase.isChecked():
             if self.dlg.cb_density_n.currentText() == "Low":
                 delta = min(Y, X) / 15  # number of points we want on the smaller axis
@@ -559,6 +543,7 @@ class DroneSurveyingPlanning:
             finally:
                 progress.close()
 
+        # check the density for the simulated points and call the Simulation(without DTM) model for accuracy prediction
         elif self.dlg.Simulation.isChecked():
             if self.dlg.cb_density_s.currentText() == "Low":
                 delta = min(Y, X) / 15  # number of points we want on the smaller axis
@@ -573,6 +558,7 @@ class DroneSurveyingPlanning:
             finally:
                 progress.close()
 
+        # call the Simulation using DTM model for accuracy prediction and retrieve path of both DEM and shapefile
         elif self.dlg.DTM.isChecked():
             dtm_name = str(self.dlg.cb_inDTM.currentText())
             shp_name = str(self.dlg.cb_invector.currentText())
@@ -581,14 +567,14 @@ class DroneSurveyingPlanning:
             except KeyError:
                 progress.close()
                 raise NoDTMError
-            '''try:
+            try:
                 shp = self.shp_list[shp_name]
             except KeyError:
                 raise NoSHPError
             finally:
-                progress.close()'''
+                progress.close()
             try:
-                self.method = SimulationDTM(drone, sensor, X, Y, h, Rl, Rt, scoll, dtm, '')
+                self.method = SimulationDTM(drone, sensor, X, Y, h, Rl, Rt, scoll, dtm, shp)
             except ZeroDivisionError:
                 raise UnfilledError
             finally:
@@ -596,29 +582,20 @@ class DroneSurveyingPlanning:
         else:
             raise RadioButtonError
 
+        # show the outputs dialog
         self.open_DSPoutputs_dialog()
 
 
     def run(self):
-        """Run method that performs all the real work"""
-
+        """Run method that shows the plugin dialog, loads vector and DTM"""
         # Create the dialog with elements (after translation) and keep reference
         # Only create GUI ONCE in callback, so that it will only load when the plugin is started
-
-
 
         # show the dialog
         self.dlg.show()
         self.loadVectors()
         self.loadDTM()
 
-        # Run the dialog event loop
-        result = self.dlg.exec_()
-        # See if OK was pressed
-        if result:
-            # Do something useful here - delete the line containing pass and
-            # substitute with your code.
-            pass
 
 if __name__ == "__main__":
     win = DroneSurveyingPlanning()
