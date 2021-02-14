@@ -1,0 +1,33 @@
+Welcome to Drone Surveying Planning (DSP) plugin!
+Here is a brief guide through the plugin GUI.
+
+Fill all the input parameters to perform a surveying planning, then click RUN to obtain the results.
+
+Choose a drone and a sensor among the listed ones or create a new one using the "New Drone" or "New Sesnor" buttons.
+
+Import a shapefile of the surveying area or set its dimensions (X,Y).
+
+Planning parameters:
+-Automatic Generation: choose a Ground Sampling Distance (GSD) to make the plugin compute the Flight Height and a Target error's standard deviation in height direction (sigma z) to automatically obtain the optminal overlapping (both longitudinal and transversal).
+-Manual: set the Flight Height and overlapping (both longitudinal and transversal).
+
+Models for Accuracy Prediction:set a sigma collimation value and then choose an algorithm among the three options. Note that for The Normal Case and Simulation (without DTM) a density for the simulated points is required and a DTM file must be imported for the Simulation using DTM.
+
+In the outputs window find the computed results as well as the maps for the Overlapping and error's standard deviation for the chosen algorithm, which can be displayed clicking on the relative buttons.
+Note that they can be saved as images.
+
+Export: choose where to save a csv file containing all user input parameters and the computed results.
+
+Progress message: it will appear when starting the computations.
+
+Error pop-ups will appear when one of the following events occur:
+-DTM not imported and Simulation using DTM is chosen
+-Shapefile not imported and Simulation using DTM is chosen
+-when either a Planning Parameters method or a Models for Accuracy prediction is not chosen
+-when the area dimensions (X,Y) or the Planning Parameters in Manual case are not set
+-when a new sensor is chosen but its parameters are not set
+-when the required drone speed required by the project is bigger than the maximum drone's speed 
+-the flight height required by the project is bigger than the drone's maximum flight height
+-the battery of the chosen drone is not enough to cover the flight path.
+
+

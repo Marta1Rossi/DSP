@@ -22,16 +22,19 @@
  ***************************************************************************/
 """
 import json
-import os.path
+import os
 
 from qgis.PyQt import QtWidgets
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
 from qgis.PyQt.QtGui import *
 from qgis.PyQt.QtWidgets import QAction, QFileDialog, QMessageBox
 from qgis.core import *
+import geopandas as gpd
+from scipy.spatial import distance
+from shapely.geometry import Point
 
-from .DSP_HELP import Ui_Dialog as DSPHELP
-from .DSP_outputs import Ui_Dialog as DSPoutputs
+from .HELP_dialog import Ui_HELP as DSPHELP
+from .DSP_outputs import Ui_Outputs as DSPoutputs
 # Import the code for the dialog
 from .DSP_dialog import DroneSurveyingPlanningDialog
 from .NewDrone import Ui_Dialog as drone
@@ -42,7 +45,9 @@ from .survey_planning import (NormalCaseMethod,
                               SimulationDTM,
                               DroneMaxSpeedError,
                               DroneBatteryError,
-                              DroneAltitudeError)
+                              DroneAltitudeError,
+                              UnfilledError,
+                              SensorError)
 
 
 class NoDTMError(KeyError):
@@ -54,11 +59,36 @@ class NoSHPError(KeyError):
 class RadioButtonError(AttributeError):
     pass
 
-class UnfilledError(Exception):
-    pass
-
 class NoFileError(Exception):
     pass
+
+def get_shp_dim(shp):
+    gdf = gpd.read_file(shp)
+    max_x = float("-inf")
+    max_y = float("-inf")
+    min_x = float("inf")
+    min_y = float("inf")
+
+    # iteration through polygon`s points
+    for index, row in gdf.iterrows():
+        for pt in list(row['geometry'].exterior.coords):
+            xy = Point(pt)
+            if xy.x < min_x:
+                min_x = xy.x
+            elif xy.x > max_x:
+                max_x = xy.x
+
+            if xy.y < min_y:
+                min_y = xy.y
+            elif xy.y > max_y:
+                max_y = xy.y
+
+    ####computing distances of the  surveying area
+    p_1 = (min_x, min_y)
+    p_2 = (max_x, min_y)
+    p_3 = (max_x, max_y)
+
+    return [distance.euclidean(p_1, p_2), distance.euclidean(p_2, p_3)]
 
 #define new dialog windows
 class DroneDialog(QtWidgets.QDialog):
@@ -120,11 +150,13 @@ class DroneSurveyingPlanning:
             QCoreApplication.installTranslator(self.translator)
 
 
-        drone_file = open(os.path.join(self.plugin_dir, 'listadroni.json'))
+        drone_file = open(os.path.join(self.plugin_dir, 'drone_list.json'))
         self.drone_list = json.load(drone_file)['DroneList']
 
-        sensor_file = open(os.path.join(self.plugin_dir, 'listasensori.json'))
+        sensor_file = open(os.path.join(self.plugin_dir, 'sensor_list.json'))
         self.sensor_list = json.load(sensor_file)['SensorList']
+
+        self.setup_imagery()
 
         # this dictionaries will map the file name to the file path
         self.dtm_list = dict()
@@ -244,14 +276,58 @@ class DroneSurveyingPlanning:
         self.loadSensor()
         # will be set False in run()
         self.first_start = True
+        # manage shapefile and DTM as inputs
         self.dlg.tb_invector.clicked.connect(self.openVector)
+        self.dlg.cb_invector.currentIndexChanged.connect(self.update_area_dim)
         self.dlg.tb_inDTM.clicked.connect(self.openDTM)
+        # open new drone and new sensor window
         self.dlg.pb_drone.clicked.connect(self.open_drone_dialog)
         self.dlg.pb_sensor.clicked.connect(self.open_sensor_dialog)
+        # display and change web basemaps
+        self.dlg.google.clicked.connect(self.change_imagery)
+        self.dlg.esri.clicked.connect(self.change_imagery)
+        self.dlg.bing.clicked.connect(self.change_imagery)
+        # RUN, HELP, CLOSE buttons managing in main dialog
         self.dlg.RUN.clicked.connect(self.run_function_handler)
         self.dlg.HelpPushButton.clicked.connect(self.open_DSPHELP_dialog)
         self.dlg.close_button.clicked.connect(self.dlg.close)
 
+    def change_imagery(self):
+        ''' this function changes the current web basemap in QGIS according to the user selection'''
+        if self.dlg.google.isChecked():
+            imagery = 'Google Satellite'
+        elif self.dlg.esri.isChecked():
+            imagery = 'ESRI Satellite'
+        elif self.dlg.bing.isChecked():
+            imagery = 'Bing Satellite'
+        else:
+            raise Exception
+
+        try:
+            QgsProject.instance().removeMapLayer(self.current_imagery)
+        except AttributeError:
+            pass
+
+        self.current_imagery = QgsRasterLayer(self.imagery_dict[imagery], imagery, "wms")
+        QgsProject.instance().addMapLayer(self.current_imagery)
+
+    def update_area_dim(self):
+        """Add the dimensions of the shapefile to the boxes when you choose a shapefile"""
+        shp_name = self.dlg.cb_invector.currentText()
+        try:
+            self.dlg.Xdim.setValue(int(self.shp_list[shp_name]["X"]))
+            self.dlg.Ydim.setValue(int(self.shp_list[shp_name]["Y"]))
+        except KeyError:
+            pass
+
+    def setup_imagery(self):
+        ''' this function add common web basemaps to QGIS '''
+        # connection type, url, zmax, zmin
+        self.current_imagery = None
+        self.imagery_dict = dict()
+        self.imagery_dict['Google Satellite'] = "type=xyz&url=https://mt1.google.com/vt/lyrs%3Ds%26x%3D%7Bx%7D%26y%3D%7By%7D%26z%3D%7Bz%7D&zmax=19&zmin=0"
+        self.imagery_dict['ESRI Satellite'] = "type=xyz&url=https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/%7Bz%7D/%7By%7D/%7Bx%7D&zmax=19&zmin=0"
+        self.imagery_dict['Bing Satellite'] ="type=xyz&url=http://ecn.t3.tiles.virtualearth.net/tiles/a{q}.jpeg?g=1&zmax=19&zmin=0"
 
     def loadDrone(self):
         """Add the created new drone to the list of drones in main DSP dialog"""
@@ -279,8 +355,12 @@ class DroneSurveyingPlanning:
         for layer in layers:
             if layer.type() == QgsMapLayer.VectorLayer:
                 vector_layers.append(layer.name())
-                self.shp_list[layer.name()] = layer.source()  # maps the path to the file name
-
+                X, Y = get_shp_dim(layer.source())
+                self.shp_list[layer.name()] = {
+                    "path": layer.source(),  # maps the path to the file name
+                    "X": X,
+                    "Y": Y
+                }
         self.dlg.cb_invector.addItems(vector_layers)
 
     def openVector(self):
@@ -381,8 +461,7 @@ class DroneSurveyingPlanning:
 
     def ExportResults(self):
         """Export inputs and outputs results as csv file"""
-        fileName = str(QFileDialog.getSaveFileName(caption='Save file',
-                                                             filter=".csv")[0])
+        fileName = str(QFileDialog.getSaveFileName(caption='Save file', filter=".csv")[0])
 
         # Check if export path is empty:
         if fileName is None:
@@ -483,6 +562,9 @@ class DroneSurveyingPlanning:
         except UnfilledError:
             self.show_popup(title="ERROR", message="Fill all input parameters")
 
+        except SensorError:
+            self.show_popup(title="ERROR", message="Fill all sensor parameters")
+
         except DroneMaxSpeedError:
             self.show_popup(title="ERROR", message="The required drone speed is bigger than the maximum speed.\n" +
                         "Please choose a drone with bigger UAS Max. Speed.")
@@ -492,7 +574,7 @@ class DroneSurveyingPlanning:
                         "Please choose a drone with higher Max. Altitude or a lower Flight Height.")
 
         except DroneBatteryError:
-            self.show_popup(title="ERROR", message="The drone battery is not enough to cover the flight path." +
+            self.show_popup(title="ERROR", message="The drone battery is not enough to cover the flight path.\n" +
                         "Please choose a drone with a longer Battery Duration.")
 
     def run_function(self):
@@ -505,17 +587,21 @@ class DroneSurveyingPlanning:
         # size of the surveyed area
         X = self.dlg.Xdim.value()  # [m]
         Y = self.dlg.Ydim.value()  # [m]
+        GSD = self.dlg.GSD_dim.value()  # [m]
+        target_sz = self.dlg.target_sz.value()  # [mm]
 
         # check if user choose "Manual" set of flight planning parameters
         if self.dlg.Manual.isChecked():
-            h = [self.dlg.h.value()]
+            h = self.dlg.h.value()
             Rl = [self.dlg.Rl.value()]
             Rt = [self.dlg.Rt.value()]
-            if Rt == 0 or Rl == 0:
-                raise UnfilledError
+
         # check if user choose "Automatic generation" of flight planning parameters
         elif self.dlg.Auto.isChecked():
-            h = [10., 20., 40.]
+            try:
+                h = (GSD * sensor['FocalLength'] * sensor['ImgSizeX']) / sensor['SizeX']
+            except ZeroDivisionError:
+                raise SensorError
             Rl = [70., 80., 90.]
             Rt = [70., 80., 90.]
         else:
@@ -537,9 +623,7 @@ class DroneSurveyingPlanning:
             else:  # High
                 delta = min(Y, X) / 35  # number of points we want on the smaller axis
             try:
-                self.method = NormalCaseMethod(drone, sensor, X, Y, h, Rl, Rt, scoll, delta)
-            except ZeroDivisionError:
-                raise UnfilledError
+                self.method = NormalCaseMethod(drone, sensor, X, Y, h, Rl, Rt, scoll, delta, target_sz=target_sz)
             finally:
                 progress.close()
 
@@ -552,9 +636,7 @@ class DroneSurveyingPlanning:
             else:  # High
                 delta = min(Y, X) / 35  # number of points we want on the smaller axis
             try:
-                self.method = SimulationMethod(drone, sensor, X, Y, h, Rl, Rt, scoll, delta)
-            except ZeroDivisionError:
-                raise UnfilledError
+                self.method = SimulationMethod(drone, sensor, X, Y, h, Rl, Rt, scoll, delta, target_sz=target_sz)
             finally:
                 progress.close()
 
@@ -568,18 +650,16 @@ class DroneSurveyingPlanning:
                 progress.close()
                 raise NoDTMError
             try:
-                shp = self.shp_list[shp_name]
+                shp = self.shp_list[shp_name]["path"]
             except KeyError:
-                raise NoSHPError
-            finally:
                 progress.close()
+                raise NoSHPError
             try:
-                self.method = SimulationDTM(drone, sensor, X, Y, h, Rl, Rt, scoll, dtm, shp)
-            except ZeroDivisionError:
-                raise UnfilledError
+                self.method = SimulationDTM(drone, sensor, X, Y, h, Rl, Rt, scoll, dtm, shp, target_sz=target_sz)
             finally:
                 progress.close()
         else:
+            progress.close()
             raise RadioButtonError
 
         # show the outputs dialog

@@ -1,0 +1,23 @@
+{
+   "SensorList": [
+	{
+	 	"SensorName": "Sens1",
+    	"FocalLength": 15,
+    	"ShootInterval": 2,
+		"SizeX": 17.3,
+    	"SizeY": 13, 
+		"ImgSizeX": 5280,
+    	"ImgSizeY": 3956 },
+
+	{
+	 	"SensorName": "Sens2",
+    	"FocalLength": 10,
+    	"ShootInterval": 2,
+		"SizeX": 15,
+    	"SizeY": 15,
+		"ImgSizeX": 1920,
+    	"ImgSizeY": 1200 }
+	 	
+		]
+}
+   

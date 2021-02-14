@@ -4,42 +4,54 @@ from numpy.random import randn
 from scipy.sparse import csr_matrix
 import scipy.sparse.linalg
 import matplotlib.pyplot as plt
-import gdal
-from qgis.PyQt.QtWidgets import QMessageBox
 import geopandas as gpd
 from shapely.geometry import Point
 import gdal
 from shapely.geometry import Polygon
-import numpy as np
 import os
 
-# this function is to generate an automatic path for the new required layers
+
 def newpath(org_path, add):
+    '''
+        This function is to generate an automatic path for the new layers in the Simulation using DTM method
+    '''
+
     path = os.path.normpath(org_path)
     file_name = path.split(os.sep)[-1]
     path = os.path.normpath(org_path)[:-(len(file_name) + 1)]
     new_file_name = file_name[:-4] + "_" + add + file_name[-4:]
     n_path = os.path.join(path, new_file_name)
-    #show_popup("DEBUG", n_path)
     return n_path
+
+
+class UnfilledError(AttributeError):
+    pass
+
+
+class SensorError(AttributeError):
+    pass
+
 
 class DroneBatteryError(ValueError):
     pass
 
+
 class DroneMaxSpeedError(ValueError):
     pass
+
 
 class DroneAltitudeError(ValueError):
     pass
 
+
 class PredictionMethod:
-    def __init__(self, drone, sensor, X, Y, h_list, Rl_list, Rt_list, scoll, delta):
+    def __init__(self, drone, sensor, X, Y, h, Rl_list, Rt_list, scoll, delta, target_sz):
         # Inputs-----------------------------------------------------------------------
         # size of the surveyed area
         self.X = X
         self.Y = Y
         # flight design parameters
-        self.h_list = h_list
+        self.h = h
         self.Rl_list = Rl_list
         self.Rt_list = Rt_list
         # accuracy in image collimation
@@ -57,68 +69,105 @@ class PredictionMethod:
         self.npx = sensor['ImgSizeX']   # [px]
         self.npy = sensor['ImgSizeY']   # [px]
 
-        # density of the simulation ground grid
-        # will be a function based on points density chosen by the user
-        self.delta = delta  # resolution of the ground point grid [m]
+        self.check_sensor()
+        self.check_inputs()
 
-        '''best_sz = 1e15  # a very big number
-        for h in self.h_list:
-            for Rl in Rl_list:
-                for Rt in Rt_list:
-                    self.setup(h=h, Rl=Rl, Rt=Rt)
-                    self.setup_ground_points()
-                    curr_sz = self.algorithm()  #curr_sz is the biggest sz of that algorithm
-                    if curr_sz < best_sz:
-                        best_sz = curr_sz
-                        best_h = h
-                        best_Rt = Rl
-                        best_Rl = Rl
-        self.h = best_h
-        self.Rl = best_Rl
-        self.Rt = best_Rt
-        self.setup(h=self.h, Rl=self.Rl, Rt=self.Rt)
-        self.setup_ground_points()
-        self.algorithm()'''
-
-        self.h = h_list[0]
-        self.Rl = Rl_list[0]
-        self.Rt = Rt_list[0]
-        self.setup_values(h=self.h, Rl=self.Rl, Rt=self.Rt)
-        self.setup_simulation()
-        self.algorithm()
-
-    def setup_values(self, h, Rl, Rt):
-        self.current_h = h
-        self.current_Rl = Rl / 100.
-        self.current_Rt = Rt / 100.
         # compute parameters ---------------------------------------------------------
-        self.W = self.fw*self.current_h / self.c  # footprint width  [m]
-        self.H = self.fh*self.current_h / self.c  # footprint height [m]
+        self.W = self.fw*self.h / self.c  # footprint width  [m]
+        self.H = self.fh*self.h / self.c  # footprint height [m]
 
         self.GSDw = self.W / self.npx  # GSD width   [m]
         self.GSDh = self.H / self.npy  # GSD height  [m]
 
+        self.pixel_size = self.fw / self.npx  # pixel size [mm]
+
+        # density of the simulation ground grid
+        # will be a function based on points density chosen by the user
+        self.delta = delta  # resolution of the ground point grid [m]
+
+        # loop to find the optimal value of the overlapping using the target sigma z and GSD
+        for Rl in Rl_list:
+            for Rt in Rt_list:
+                self.setup_values(Rl=Rl, Rt=Rt)
+                self.setup_simulation()
+                curr_sz = self.algorithm()  # curr_sz is the biggest sigma z of that algorithm
+                if curr_sz < target_sz:
+                    break
+            if curr_sz < target_sz:
+                break
+
+        self.Rt = Rt
+        self.Rl = Rl
+
+    def check_sensor(self):
+        to_check_sensor = [self.c, self.shooting_int, self.fw, self.fh, self.npx, self.npy]
+        for i in to_check_sensor:
+            if i == 0:
+                raise SensorError
+
+    def check_inputs(self):
+        to_check_in = [self.X, self.Y, self.h, self.Rl_list[0], self.Rt_list[0]]
+        for i in to_check_in:
+            if i == 0:
+                raise UnfilledError
+
+
+    def setup_values(self, Rl, Rt):
+        '''
+            using the current Rl, Rt (that may vary in case of automatic generation), we compute the
+            interaxie and the baseline
+        '''
+        self.current_Rl = Rl / 100.
+        self.current_Rt = Rt / 100.
+
         self.b = (1 - self.current_Rl) * self.H          # baseline
         self.interaxie = (1 - self.current_Rt) * self.W  # interaxie
 
-        self.pixel_size = self.fw / self.npx  # pixel size [mm]
-
-        if self.current_h > self.UAS_maxAltitude:
-            # if the selected flight height is too big for that drone an error is raised
-            raise DroneAltitudeError
-
     def setup_simulation(self):
+        '''
+            setup values to run the simulation algorithm.
+            Here we obtain the flight path, the real values for some parameters and the grid of ground points.
+            Since these parameters will change in simulation using DTM, this function will be overwritten in the DTM
+            subclass.
+        '''
         self.nstrip_y = np.ceil(self.Y / self.b)          # number of strips in y
         self.nstrip_x = np.ceil(self.X / self.interaxie)  # number of strips in x
 
-        flpath_length = self.X + self.Y * (self.nstrip_x + 1)
-
         self.num_images = self.nstrip_y * self.nstrip_x  # total expected number of images (in both directions)
 
+        self.generate_real_parameters()
+
+        self.check_drone_error()
+
+        # determine the position of camera acquisition
+        self.xo = np.arange(self.i_real/2, self.X, self.i_real)  # [m]
+        self.yo = np.arange(self.b_real/2, self.Y, self.b_real)  # [m]
+        self.Xo, self.Yo = np.meshgrid(self.xo, self.yo)         # grid of coordinates   [m]
+
+        self.Zo = self.h  # height of acquisition [m]
+
+        self.generate_flight_path()
+
+        # define the grid of ground points -------------------------------------------
+        self.xGrid = np.arange(self.delta/2, self.X, self.delta)  # vector of x
+        self.yGrid = np.arange(self.delta/2, self.Y, self.delta)  # vector of y coordinates
+        self.XGrid, self.YGrid = np.meshgrid(self.xGrid, self.yGrid)  # matrices of all coordinates (couples x and y)
+        # index (name) of each point (to be used in the simulation)
+        self.ptName = np.arange(len(self.XGrid[0])*len(self.YGrid)).reshape((len(self.YGrid), len(self.XGrid[0])), order='F')
+
+    def check_drone_error(self):
+        '''
+            This function checks if the chosen drone is suitable for the required task
+        '''
+
+        if self.h > self.UAS_maxAltitude:
+            # if the selected flight height is too big for that drone an error is raised
+            raise DroneAltitudeError
+
         if np.floor(self.b / self.shooting_int) < float(self.UAS_v) / 3.6:  # [m/s]
-            if flpath_length / self.battery < float(self.UAS_v) / 3.6:
+            if self.max_distance_proj / self.battery < float(self.UAS_v) / 3.6:
                 # UAS min speed compliant with shooting interval
-                self.UAS_v_min = max(self.b / self.shooting_int, flpath_length / self.battery)
+                self.UAS_v_min = max(self.b / self.shooting_int, self.max_distance_proj / self.battery)
             else:
                 # if the length is too big for the battery duration an error is raised
                 raise DroneBatteryError
@@ -127,22 +176,19 @@ class PredictionMethod:
             # then, an error is raised
             raise DroneMaxSpeedError
 
-        self.max_distance = self.UAS_v * 60 * self.UAS_v_min  # max distance covered [m]
-        self.max_distance_proj = self.nstrip_x * self.b * self.nstrip_y + self.b * self.interaxie  # max distance in project [m]
+    def generate_real_parameters(self):
+        '''
+            adapt the estimated parameters to uniformly cover the area
+        '''
+        self.max_distance = (self.UAS_v / 3600 ) * self.battery  # max distance covered [km]
+        self.max_distance_proj = (self.X + self.Y * self.nstrip_x) / 1000  # length of the flight path [km]
 
-        # adapt the estimated parameters to uniformly cover the area
         self.b_real = self.Y / self.nstrip_y  # real baseline
         self.i_real = self.X / self.nstrip_x  # real interaxie
         self.Rl_real = 1 - self.b_real / self.H  # real longitudinal overlapping
         self.Rt_real = 1 - self.i_real / self.W  # real transversal overlapping
 
-        # determine the position of camera acquisition
-        self.xo = np.arange(self.i_real/2, self.X, self.i_real)  # [m]
-        self.yo = np.arange(self.b_real/2, self.Y, self.b_real)  # [m]
-        self.Xo, self.Yo = np.meshgrid(self.xo, self.yo)         # grid of coordinates   [m]
-
-        self.Zo = self.current_h  # height of acquisition [m]
-
+    def generate_flight_path(self):
         # compute the flight path (sort the couple x and y according to the drone path)
         self.nstrip_x = self.nstrip_x.astype(np.int64)
         self.nstrip_y = self.nstrip_y.astype(np.int64)
@@ -155,15 +201,10 @@ class PredictionMethod:
             else:
                 self.flpath[i*self.nstrip_y: (i+1)*self.nstrip_y, 1] = self.yo
 
-        # define the grid of ground points -------------------------------------------
-        self.xGrid = np.arange(self.delta/2, self.X, self.delta)  # vector of x
-        self.yGrid = np.arange(self.delta/2, self.Y, self.delta)  # vector of y coordinates
-        self.XGrid, self.YGrid = np.meshgrid(self.xGrid, self.yGrid)  # matrices of all coordinates (couples x and y)
-        # index (name) of each point (to be used in the simulation)
-        self.ptName = np.arange(len(self.XGrid[0])*len(self.YGrid)).reshape((len(self.YGrid), len(self.XGrid[0])), order='F')
-
-        # overlapping map ------------------------------------------------------------
-
+    def generate_overlapping_map(self):
+        '''
+            this function will generate the overlapping map, needed for the plotting
+        '''
         # map of the number of images from which each point is seen
         # overlapping in y direction (vector) - longitudinal
         over_y = np.zeros(len(self.yGrid))
@@ -183,6 +224,11 @@ class PredictionMethod:
         self.Over_x, self.Over_y = np.meshgrid(over_x, over_y)
 
     def plot_overlapping(self):
+        '''
+            This function is used to generate and show the overlapping graphs.
+            Since the overlapping is independent from the algorithm, this function will be the same for each of them.
+        '''
+        self.generate_overlapping_map()
         fig, ((ax11, ax12), (ax21, ax22)) = plt.subplots(nrows=2, ncols=2)
         x_rect = np.array([0, self.X, self.X, 0, 0])
         y_rect = np.array([0, 0, self.Y, self.Y, 0])
@@ -218,17 +264,17 @@ class PredictionMethod:
         fig.tight_layout(pad=2.0)
         plt.show()
 
-    def algorithm(self):
-        raise NotImplementedError
-
 
 class NormalCaseMethod(PredictionMethod):
 
-    def __init__(self, drone, sensor, X, Y, h, Rl, Rt, scoll, delta):
-        super().__init__(drone, sensor, X, Y, h, Rl, Rt, scoll, delta)
+    def __init__(self, drone, sensor, X, Y, h, Rl, Rt, scoll, delta, target_sz):
+        super().__init__(drone, sensor, X, Y, h, Rl, Rt, scoll, delta, target_sz=target_sz)
         self.method_name = "Normal Case"
 
     def plot_error(self):
+        '''
+            This function plots the error map
+        '''
         x_rect = np.array([0, self.X, self.X, 0, 0])
         y_rect = np.array([0, 0, self.Y, self.Y, 0])
 
@@ -242,24 +288,33 @@ class NormalCaseMethod(PredictionMethod):
         plt.show()
 
     def algorithm(self):
+        '''
+            Normal case implementation.
+            This function will return the maximum sigma z in the error map. This value will be used in the automatic
+            generation procedure to select the best values of overlapping
+        '''
+        self.generate_overlapping_map()
         # error map (derived from overlapping map) -----------------------------------
         self.s2px = 2 * (self.scoll*self.fw/self.npx)**2  #  sigma2 of the parallax (propagating the sigma of collimation) [mm^2]
-        self.s2zy = (self.current_h**2 / (self.c*1e-3 * self.i_real))**2 * self.s2px  #  sigma2 of the computed z considering longitudinal overlapping [mm^2]
-        self.s2zx = (self.current_h**2 / (self.c*1e-3 * self.b_real))**2 * self.s2px  #  sigma2 of the computed z considering transversal overlapping  [mm^2]
+        self.s2zy = (self.h**2 / (self.c*1e-3 * self.i_real))**2 * self.s2px  #  sigma2 of the computed z considering longitudinal overlapping [mm^2]
+        self.s2zx = (self.h**2 / (self.c*1e-3 * self.b_real))**2 * self.s2px  #  sigma2 of the computed z considering transversal overlapping  [mm^2]
 
         # propagate s2zx and s2zy
         self.sz1 = np.sqrt(
             ((self.s2zy * (self.Over_y - 1) + self.s2zx * (self.Over_x - 1)) / ((self.Over_y - 1) + (self.Over_x - 1))**2)
         )
 
-        # return np.max(self.sz1)
+        return np.max(self.sz1)
 
 class SimulationMethod(PredictionMethod):
-    def __init__(self, drone, sensor, X, Y, h, Rl, Rt, scoll, delta):
-        super(SimulationMethod, self).__init__(drone, sensor, X, Y, h, Rl, Rt, scoll, delta)
+    def __init__(self, drone, sensor, X, Y, h, Rl, Rt, scoll, delta, target_sz):
+        super(SimulationMethod, self).__init__(drone, sensor, X, Y, h, Rl, Rt, scoll, delta, target_sz=target_sz)
         self.method_name = "Simulation (without DTM)"
 
     def plot_error(self):
+        '''
+            This function plots the error map
+        '''
         fig1, ((ax111, ax112), (ax121, ax122)) = plt.subplots(nrows=2, ncols=2)
         fig2, ((ax211, ax212), (ax221, ax222)) = plt.subplots(nrows=2, ncols=2)
         x_rect = np.array([0, self.X, self.X, 0, 0])
@@ -325,84 +380,81 @@ class SimulationMethod(PredictionMethod):
         fig2.tight_layout(pad=2)
         plt.show()
 
-    def algorithm(self):
-        #########################simulation part ########################
-        # initialize empty vectors
-        pt_obs, im_obs, xsi_obs, eta_obs = ([] for i in range(4))
+    def simulate_observation(self):
+        '''
+            in this function we simulate the observations
+        '''
+        self.pt_obs, self.im_obs, self.xsi_obs, self.eta_obs = ([] for i in range(4))
 
-        # simulate observations
         self.Xo = np.transpose(self.Xo)
         self.Yo = np.transpose(self.Yo)
         for i in range(self.nstrip_x):
             for j in range(self.nstrip_y):
                 # compute image coordinates for all the points
-                xsiGrid = (self.XGrid - self.Xo[i][j]) / self.current_h * self.c   # [mm]
-                etaGrid = (self.YGrid - self.Yo[i][j]) / self.current_h * self.c   # [mm]
+                xsiGrid = (self.XGrid - self.Xo[i][j]) / self.h * self.c   # [mm]
+                etaGrid = (self.YGrid - self.Yo[i][j]) / self.h * self.c   # [mm]
                 # filter point inside the image plane
                 mask1 = np.abs(xsiGrid) <= np.float(self.fw)/2
                 mask2 = np.abs(etaGrid) <= np.float(self.fh)/2
                 mask = mask1.astype(int) * mask2.astype(int)
 
                 # store the observations
-                pt_obs.append(self.ptName[mask[:]==1])
-                im_obs.append((i*self.nstrip_y+j)*mask[mask[:]==1])
-                xsi_obs.append(xsiGrid[mask[:]==1])
-                eta_obs.append(etaGrid[mask[:]==1])
+                self.pt_obs.append(self.ptName[mask[:]==1])
+                self.im_obs.append((i*self.nstrip_y+j)*mask[mask[:]==1])
+                self.xsi_obs.append(xsiGrid[mask[:]==1])
+                self.eta_obs.append(etaGrid[mask[:]==1])
 
-        im_obs = np.concatenate(im_obs)
-        pt_obs = np.concatenate(pt_obs)
-        xsi_obs = np.concatenate(xsi_obs)
-        eta_obs = np.concatenate(eta_obs)
+        self.im_obs = np.concatenate(self.im_obs)
+        self.pt_obs = np.concatenate(self.pt_obs)
+        self.xsi_obs = np.concatenate(self.xsi_obs)
+        self.eta_obs = np.concatenate(self.eta_obs)
 
-        n_obs = len(pt_obs)                 # number of couples of observations
-        n_pt = np.amax(self.ptName[:]) + 1  # number of ground points
+        self.n_obs = len(self.pt_obs)            # number of couples of observations
+        self.n_pt = np.amax(self.ptName[:])+1    # number of ground points
 
-        noise1 = randn(len(xsi_obs))
-        noise2 = randn(len(eta_obs))
+        noise1 = randn(len(self.xsi_obs))
+        noise2 = randn(len(self.eta_obs))
         # simulate with noise
-        xsi_obs = xsi_obs + (self.scoll * self.fw / self.npx) * noise1
-        eta_obs = eta_obs + (self.scoll * self.fw / self.npx) * noise2
+        self.xsi_obs = self.xsi_obs + (self.scoll * self.fw / self.npx) * noise1
+        self.eta_obs = self.eta_obs + (self.scoll * self.fw / self.npx) * noise2
 
-        # design matrix A:
+        self.im_obs_x = self.im_obs // self.nstrip_y
+        self.im_obs_y = self.im_obs % self.nstrip_y
+        self.my_Xo = np.zeros(len(self.im_obs))
+        self.my_Yo = np.zeros(len(self.im_obs))
+        for i in range(len(self.im_obs)):
+            self.my_Xo[i] = self.Xo[self.im_obs_x[i]][self.im_obs_y[i]]
+            self.my_Yo[i] = self.Yo[self.im_obs_x[i]][self.im_obs_y[i]]
+
+        self.xsi = self.xsi_obs * self.Zo + self.c * self.my_Xo
+        self.eta = self.eta_obs * self.Zo + self.c * self.my_Yo
+
+    def calculate_A(self):
+        ''' this function computes the design matrix A '''
 
         # csi
-        A = csr_matrix((self.c * np.ones(n_obs), (np.arange(n_obs), pt_obs)),
-                       shape=(int(n_obs)*2, int(n_pt)*3))
+        A = csr_matrix((self.c * np.ones(self.n_obs), (np.arange(self.n_obs), self.pt_obs)),
+                       shape=(int(self.n_obs)*2, int(self.n_pt)*3))
 
-        A = A + csr_matrix((xsi_obs, (np.arange(n_obs), pt_obs + 2*n_pt)),
-                           shape=(int(n_obs)*2, int(n_pt)*3))
+        A = A + csr_matrix((self.xsi_obs, (np.arange(self.n_obs), self.pt_obs + 2*self.n_pt)),
+                           shape=(int(self.n_obs)*2, int(self.n_pt)*3))
 
         # eta
-        A = A + csr_matrix((self.c * np.ones(n_obs), (np.arange(n_obs, 2*n_obs), pt_obs+n_pt)),
-                           shape=(int(n_obs)*2, int(n_pt)*3))
+        A = A + csr_matrix((self.c * np.ones(self.n_obs), (np.arange(self.n_obs, 2*self.n_obs), self.pt_obs+self.n_pt)),
+                           shape=(int(self.n_obs)*2, int(self.n_pt)*3))
 
-        A = A + csr_matrix((eta_obs, (np.arange(n_obs, 2*n_obs), pt_obs+2*n_pt)),
-                           shape=(int(n_obs)*2, int(n_pt)*3))
+        A = A + csr_matrix((self.eta_obs, (np.arange(self.n_obs, 2*self.n_obs), self.pt_obs+2*self.n_pt)),
+                           shape=(int(self.n_obs)*2, int(self.n_pt)*3))
+        return A
 
-        im_obs_x = im_obs // self.nstrip_y
-        im_obs_y = im_obs % self.nstrip_y
-        my_Xo = np.zeros(len(im_obs))
-        my_Yo = np.zeros(len(im_obs))
-        for i in range(len(im_obs)):
-            my_Xo[i] = self.Xo[im_obs_x[i]][im_obs_y[i]]
-            my_Yo[i] = self.Yo[im_obs_x[i]][im_obs_y[i]]
-
-        xsi = xsi_obs * self.Zo + self.c * my_Xo
-        eta = eta_obs * self.Zo + self.c * my_Yo
-
-        # observation vector yo
-        yo = np.array([xsi, eta])
-
-        # Normal matrix N
-        A_transpose = A.transpose()
-        N = A_transpose @ A
-
+    def invert_matrix(self, N):
+        ''' this function inverts a matrix; in this case we give the normal matrix N '''
         # inverse of N using LU decomposition and iteration
         # this method is less compact, but the matrix was too big to be allocated using other methods
         lu = scipy.sparse.linalg.splu(N)
 
-        x_coo = []   # x coordinate of non-zero values
-        y_coo = []   # y coordinate of non-zero values
+        x_coo = []  # x coordinate of non-zero values
+        y_coo = []  # y coordinate of non-zero values
         values = []  # values different from zero in N matrix
 
         for i in range(N.shape[0]):
@@ -422,63 +474,83 @@ class SimulationMethod(PredictionMethod):
         y_coo = np.concatenate(y_coo)
         values = np.concatenate(values)
 
-        # here we create the sparse matrix from the positions of non zero values and their
-        # actual value
+        # here we create the sparse matrix from the positions of non zero values and their actual value
         invN = csr_matrix((values, (x_coo, y_coo)), shape=(N.shape[0], N.shape[1]))
+        return invN
 
-        yo = yo.reshape(-1)  # create a vector from a matrix
-        # normal known term
-        nt = A_transpose @ yo
-        # estimated values
-        x = (invN @ nt)
+    def generate_error_map(self, A, x, yo, invN):
+        '''
+            this function generates the error map, that will be both needed for plotting and to choose the
+            best values for the overlapping in the automatic generation method
+        '''
         # LS residuals
         v_est = yo - A @ x
-        # a-posteriori variance 
+        # a-posteriori variance
         s02 = (v_est.transpose() @ v_est) / (A.shape[0] - A.shape[1])
 
         # vector of standard deviation (diagonal of the parameter covariance
         # matrix, rescaled by the a-priori collimation standard deviation)
         invN_diag = invN.diagonal()
 
-        s2 = np.sqrt(s02 * invN_diag)                                      # [m] from "empirical" s02
-        s3 = (self.scoll*self.fw/self.npx * self.Zo) * np.sqrt(invN_diag)  # [m] from "theoretical" s02
+        s2 = np.sqrt(s02 * invN_diag)  # [m] from "empirical" s02
+        s3 = (self.scoll * self.fw / self.npx * self.Zo) * np.sqrt(invN_diag)  # [m] from "theoretical" s02
 
         # extract the error map in the three components("empirical")
-        self.sx2 = np.reshape(s2[0: n_pt], self.XGrid.shape) * 1e3             # [mm]
-        self.sy2 = np.reshape(s2[n_pt: 2 * n_pt], self.XGrid.shape) * 1e3      # [mm]
-        self.sz2 = np.reshape(s2[2 * n_pt: 3 * n_pt], self.XGrid.shape) * 1e3  # [mm]
+        self.sx2 = np.reshape(s2[0: self.n_pt], self.XGrid.shape) * 1e3  # [mm]
+        self.sy2 = np.reshape(s2[self.n_pt: 2 * self.n_pt], self.XGrid.shape) * 1e3  # [mm]
+        self.sz2 = np.reshape(s2[2 * self.n_pt: 3 * self.n_pt], self.XGrid.shape) * 1e3  # [mm]
 
         # extract the error map in the three components("theoretical")
-        self.sx3 = np.reshape(s3[0: n_pt], self.XGrid.shape) * 1e3             # [mm]
-        self.sy3 = np.reshape(s3[n_pt: 2 * n_pt], self.XGrid.shape) * 1e3      # [mm]
-        self.sz3 = np.reshape(s3[2 * n_pt: 3 * n_pt], self.XGrid.shape) * 1e3  # [mm]
+        self.sx3 = np.reshape(s3[0: self.n_pt], self.XGrid.shape) * 1e3  # [mm]
+        self.sy3 = np.reshape(s3[self.n_pt: 2 * self.n_pt], self.XGrid.shape) * 1e3  # [mm]
+        self.sz3 = np.reshape(s3[2 * self.n_pt: 3 * self.n_pt], self.XGrid.shape) * 1e3  # [mm]
 
-        #return np.max(self.sz2)
+    def algorithm(self):
+        '''
+            Simulation implementation.
+            This function will return the maximum sigma z in the error map. This value will be used in the automatic
+            generation procedure to select the best values of overlapping.
+            Since the DTM algorithm is still a simulation method, this function will be used also by Simulation using
+            DTM.
+        '''
+        self.simulate_observation()
+        A = self.calculate_A()
 
-        #invN = scipy.sparse.linalg.inv(N)
-        #L = csr_matrix(np.linalg.cholesky(N.todense()))
-        #L = scipy.linalg.cholesky(N.todense(),lower=True)
-        #invN = np.linalg.pinv(N.toarray())
-        #invL = np.linalg.inv(L)
-        #invN = np.transpose(invL) @ invL
-        #lu_obj = scipy.sparse.linalg.splu(N)
-        #lu_obj.solve(np.eye(157500))
+        # Normal matrix N
+        A_transpose = A.transpose()
+        N = A_transpose @ A
+
+        invN = self.invert_matrix(N)
+
+        # observation vector yo
+        yo = np.array([self.xsi, self.eta])
+        yo = yo.reshape(-1)  # create a vector from a matrix
+
+        # normal known term
+        nt = A_transpose @ yo
+        # estimated values
+        x = (invN @ nt)
+
+        self.generate_error_map(A=A, x=x, yo=yo, invN=invN)
+
+        return np.max(self.sz2)     # empirical sigma z
+
 
 class SimulationDTM(SimulationMethod):
-    def __init__(self, drone, sensor, X, Y, h, Rl, Rt, scoll, dtm_in, shp_in):
+    def __init__(self, drone, sensor, X, Y, h, Rl, Rt, scoll, dtm_in, shp_in, target_sz):
         self.dtm_in = dtm_in
         self.shp_in = shp_in
-        super(SimulationDTM, self).__init__(drone, sensor, X, Y, h, Rl, Rt, scoll, delta=0)
+        super(SimulationDTM, self).__init__(drone, sensor, X, Y, h, Rl, Rt, scoll, delta=0, target_sz=target_sz)
         self.method_name = "Simulation (with DTM)"
 
     def setup_simulation(self):
         '''
-        This function retrieves the values from the DTM and overwrites the simulated parameters.
-        Specifically:
-        1- Extract vertices from user shapefile
-        2- Creating new rectangle polygon from extracted vertices
-        3- Clipping the user DEM over the Rectangular Surveying area
-        4- Extract Data From the Clipped DEM
+            This function retrieves the values from the DTM and overwrites the simulated parameters.
+            Specifically:
+            1- Extract vertices from user shapefile
+            2- Creating new rectangle polygon from extracted vertices
+            3- Clipping the user DEM over the Rectangular Surveying area
+            4- Extract Data From the Clipped DEM
         '''
         # User inputs:
         # Shapefile path of the user area
@@ -491,11 +563,11 @@ class SimulationDTM(SimulationMethod):
         gdf = gpd.read_file(fn)
         # call the Coordinate reference system of the shapefile
         cr = gdf.crs
-        # Initiation of polygon point coordinate x,y as very big (for max) and very small (for min) numbers
-        max_x = -9999
-        max_y = -9999
-        min_x = 9999
-        min_y = 9999
+        # Initiation of polygon point coordinate such that allocation is avoided in next iteration
+        max_x = float("-inf")
+        max_y = float("-inf")
+        min_x = float("inf")
+        min_y = float("inf")
 
         # iteration through polygon`s points
         for index, row in gdf.iterrows():
@@ -539,20 +611,22 @@ class SimulationDTM(SimulationMethod):
         Elev = ds.GetRasterBand(1).ReadAsArray()
 
         ###4-Extract Data From the Clipped DEM###
-        self.Y = Elev.shape[0]  # no of rows ("height" = Y)
-        self.X = Elev.shape[1]  # no of coloumns ("width" = X)
+        Y = Elev.shape[0]  # no of rows ("height" = Y)
+        X = Elev.shape[1]  # no of coloumns ("width" = X)
+
+        delta = 10
 
         # origin x_0, y_0
         x_0 = ds.GetGeoTransform()[0]
         Dem_res_x = np.abs(ds.GetGeoTransform()[1])  # pixel dimension
         y_0 = ds.GetGeoTransform()[3]
         Dem_res_y = np.abs(ds.GetGeoTransform()[5])  # pixel dimension
-        X_end = x_0 + Dem_res_x * self.X  
-        Y_end = y_0 + Dem_res_y * self.Y
+        self.X = Dem_res_x * X
+        self.Y = Dem_res_y * Y
         self.nstrip_y = np.ceil(self.Y / self.b)  # number of strips in y
         self.nstrip_x = np.ceil(self.X / self.interaxie)  # number of strips in x
 
-        flpath_length = self.X + self.Y * (self.nstrip_x + 1)  # for error checking
+        flpath_length = self.X + self.Y * (self.nstrip_x + 1)  # flight path for error checking
 
         self.num_images = self.nstrip_y * self.nstrip_x  # total expected number of images (in both directions)
 
@@ -572,22 +646,23 @@ class SimulationDTM(SimulationMethod):
         self.max_distance_proj = self.nstrip_x * self.b * self.nstrip_y + self.b * self.interaxie  # max distance in project [m]
 
         # adapt the estimated parameters to uniformly cover the area
-        self.b_real = (self.Y-y_0) / self.nstrip_y  # real baseline
-        self.i_real = (self.X-x_0) / self.nstrip_x  # real interaxie
+        self.b_real = (self.Y) / self.nstrip_y  # real baseline
+        self.i_real = (self.X) / self.nstrip_x  # real interaxie
         self.Rl_real = 1 - self.b_real / self.H  # real longitudinal overlapping
         self.Rt_real = 1 - self.i_real / self.W  # real transversal overlapping
 
         # determine the position of camera acquisition
         # moving origin of the acqusition to the bottom left corner of DEM
-        self.xo = np.arange(x_0 + self.i_real/2, self.X, self.i_real)   # [m]
-        self.yo = np.arange(y_0,  self.Y - self.b_real/2, self.b_real)  # [m]
+        self.xo = np.arange(0 + self.i_real/2, self.X, self.i_real)   # [m]
+        self.yo = np.arange(0,  self.Y - self.b_real/2, self.b_real)  # [m]
         self.yo = np.flipud(self.yo)
         self.Xo, self.Yo = np.meshgrid(self.xo, self.yo)                # grid of coordinates [m]
 
-        # determine the position of camera acquisition: Zo
+        # determine the position of camera acquisition
         # set Nan values
         Elev[Elev == -32767.] = np.nan
-        self.Zo = np.nanmean(Elev)  # height of acquisition [m]
+        # translating the Elev to our conventional Z
+        self.Zo = np.nanmean(Elev) + self.h  # height of acquisition [m]
 
         # compute the flight path (sort the couple x and y according to the drone path
         self.nstrip_x = self.nstrip_x.astype(np.int64)
@@ -602,8 +677,8 @@ class SimulationDTM(SimulationMethod):
                 self.flpath[i * self.nstrip_y: (i + 1) * self.nstrip_y, 1] = self.yo
 
         # define the grid of ground points -------------------------------------------
-        self.xGrid = np.arange(x_0, X_end, Dem_res_x)  # vector of x
-        self.yGrid = np.arange(y_0, Y_end, Dem_res_y)  # vector of y coordinates
+        self.xGrid = np.arange(0, self.X, Dem_res_x * delta)  # vector of x
+        self.yGrid = np.arange(0, self.Y, Dem_res_y * delta)  # vector of y coordinates
         self.XGrid, self.YGrid = np.meshgrid(self.xGrid, self.yGrid)  # matrices of all coordinates (couples x and y)
         # index ("name") of each point (to be used in the simulation)
         self.ptName = np.arange(len(self.XGrid[0]) * len(self.YGrid)).reshape((len(self.YGrid), len(self.XGrid[0])), order='F')

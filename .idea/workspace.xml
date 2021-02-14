@@ -2,12 +2,33 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="60913502-46cf-443c-8760-f190adc93d3b" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/PluginFiles/.idea/vcs.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/PluginFiles/alg.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/PluginFiles/debug" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/PluginFiles/DSP.py" beforeDir="false" afterPath="$PROJECT_DIR$/PluginFiles/DSP.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/PluginFiles/DSP_HELP.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/PluginFiles/DSP_HELP.ui" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/PluginFiles/DSP_dialog.py" beforeDir="false" afterPath="$PROJECT_DIR$/PluginFiles/DSP_dialog.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/PluginFiles/DSP_dialog_base.ui" beforeDir="false" afterPath="$PROJECT_DIR$/PluginFiles/DSP_dialog_base.ui" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/PluginFiles/DSP_outputs.py" beforeDir="false" afterPath="$PROJECT_DIR$/PluginFiles/DSP_outputs.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/PluginFiles/DSP_outputs.ui" beforeDir="false" afterPath="$PROJECT_DIR$/PluginFiles/DSP_outputs.ui" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/PluginFiles/listadroni.json" beforeDir="false" afterPath="$PROJECT_DIR$/PluginFiles/listadroni.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/PluginFiles/listasensori.json" beforeDir="false" afterPath="$PROJECT_DIR$/PluginFiles/listasensori.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/PluginFiles/help/build/doctrees/environment.pickle" beforeDir="false" afterPath="$PROJECT_DIR$/PluginFiles/help/build/doctrees/environment.pickle" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/PluginFiles/help/build/doctrees/index.doctree" beforeDir="false" afterPath="$PROJECT_DIR$/PluginFiles/help/build/doctrees/index.doctree" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/PluginFiles/help/build/html/.buildinfo" beforeDir="false" afterPath="$PROJECT_DIR$/PluginFiles/help/build/html/.buildinfo" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/PluginFiles/help/build/html/_sources/index.rst.txt" beforeDir="false" afterPath="$PROJECT_DIR$/PluginFiles/help/build/html/_sources/index.rst.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/PluginFiles/help/build/html/_static/basic.css" beforeDir="false" afterPath="$PROJECT_DIR$/PluginFiles/help/build/html/_static/basic.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/PluginFiles/help/build/html/_static/classic.css" beforeDir="false" afterPath="$PROJECT_DIR$/PluginFiles/help/build/html/_static/classic.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/PluginFiles/help/build/html/_static/doctools.js" beforeDir="false" afterPath="$PROJECT_DIR$/PluginFiles/help/build/html/_static/doctools.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/PluginFiles/help/build/html/_static/language_data.js" beforeDir="false" afterPath="$PROJECT_DIR$/PluginFiles/help/build/html/_static/language_data.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/PluginFiles/help/build/html/_static/searchtools.js" beforeDir="false" afterPath="$PROJECT_DIR$/PluginFiles/help/build/html/_static/searchtools.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/PluginFiles/help/build/html/_static/sidebar.js" beforeDir="false" afterPath="$PROJECT_DIR$/PluginFiles/help/build/html/_static/sidebar.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/PluginFiles/help/build/html/genindex.html" beforeDir="false" afterPath="$PROJECT_DIR$/PluginFiles/help/build/html/genindex.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/PluginFiles/help/build/html/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/PluginFiles/help/build/html/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/PluginFiles/help/build/html/search.html" beforeDir="false" afterPath="$PROJECT_DIR$/PluginFiles/help/build/html/search.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/PluginFiles/listadroni.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/PluginFiles/listasensori.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/PluginFiles/pb_tool.cfg" beforeDir="false" afterPath="$PROJECT_DIR$/PluginFiles/pb_tool.cfg" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/PluginFiles/survey_planning.py" beforeDir="false" afterPath="$PROJECT_DIR$/PluginFiles/survey_planning.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -25,7 +46,7 @@
   </component>
   <component name="PropertiesComponent">
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/PluginFiles/survey_planning.py" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
   </component>
   <component name="RunManager" selected="Python.Planning">
     <configuration name="DSP" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
