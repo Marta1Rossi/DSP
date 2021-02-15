@@ -317,11 +317,11 @@ class SimulationMethod(PredictionMethod):
         '''
         fig1, ((ax111, ax112), (ax121, ax122)) = plt.subplots(nrows=2, ncols=2)
         fig2, ((ax211, ax212), (ax221, ax222)) = plt.subplots(nrows=2, ncols=2)
-        x_rect = np.array([0, self.X, self.X, 0, 0])
-        y_rect = np.array([0, 0, self.Y, self.Y, 0])
+        self.x_rect = np.array([0, self.X, self.X, 0, 0])
+        self.y_rect = np.array([0, 0, self.Y, self.Y, 0])
 
         # LS sigma-z (theoretical)
-        ax111.plot(x_rect, y_rect, 'r')
+        ax111.plot(self.x_rect, self.y_rect, 'r')
         ax111.axis('equal')
         im = ax111.imshow(self.sz2, extent=[0, self.X, 0, self.Y])
         ax111.plot(self.Xo, self.Yo, '.k', markersize=0.5)
@@ -330,7 +330,7 @@ class SimulationMethod(PredictionMethod):
         ax111.set_title("Estimated error [mm] - LS σz (theor)", fontsize=8)
 
         # LS sigma-z (empirical)
-        ax211.plot(x_rect, y_rect, 'r')
+        ax211.plot(self.x_rect, self.y_rect, 'r')
         ax211.axis('equal')
         im = ax211.imshow(self.sz3, extent=[0, self.X, 0, self.Y])
         ax211.plot(self.Xo, self.Yo, '.k', markersize=0.5)
@@ -339,7 +339,7 @@ class SimulationMethod(PredictionMethod):
         ax211.set_title("Estimated error [mm] - LS σz (emp)", fontsize=8)
 
         # LS sigma-x (theoretical)
-        ax112.plot(x_rect, y_rect, 'r')
+        ax112.plot(self.x_rect, self.y_rect, 'r')
         ax112.axis('equal')
         im = ax112.imshow(self.sx2, extent=[0, self.X, 0, self.Y])
         ax112.plot(self.Xo, self.Yo, '.k', markersize=0.5)
@@ -348,7 +348,7 @@ class SimulationMethod(PredictionMethod):
         ax112.set_title("Estimated error [mm] - LS σx (theor)", fontsize=8)
 
         # LS sigma-x (empirical)
-        ax212.plot(x_rect, y_rect, 'r')
+        ax212.plot(self.x_rect, self.y_rect, 'r')
         ax212.axis('equal')
         im = ax212.imshow(self.sx3, extent=[0, self.X, 0, self.Y])
         ax212.plot(self.Xo, self.Yo, '.k', markersize=0.5)
@@ -357,7 +357,7 @@ class SimulationMethod(PredictionMethod):
         ax212.set_title("Estimated error [mm] - LS σx (emp)", fontsize=8)
 
         # LS sigma-y (theoretical)
-        ax121.plot(x_rect, y_rect, 'r')
+        ax121.plot(self.x_rect, self.y_rect, 'r')
         ax121.axis('equal')
         im = ax121.imshow(self.sy2, extent=[0, self.X, 0, self.Y])
         ax121.plot(self.Xo, self.Yo, '.k', markersize=0.5)
@@ -366,7 +366,7 @@ class SimulationMethod(PredictionMethod):
         ax121.set_title("Estimated error [mm] - LS σy (theor)", fontsize=8)
 
         # LS sigma-y (empirical)
-        ax221.plot(x_rect, y_rect, 'r')
+        ax221.plot(self.x_rect, self.y_rect, 'r')
         ax221.axis('equal')
         im = ax221.imshow(self.sy3, extent=[0, self.X, 0, self.Y])
         ax221.plot(self.Xo, self.Yo, '.k', markersize=0.5)
@@ -563,6 +563,7 @@ class SimulationDTM(SimulationMethod):
         gdf = gpd.read_file(fn)
         # call the Coordinate reference system of the shapefile
         cr = gdf.crs
+        '''
         # Initiation of polygon point coordinate such that allocation is avoided in next iteration
         max_x = float("-inf")
         max_y = float("-inf")
@@ -588,6 +589,38 @@ class SimulationDTM(SimulationMethod):
         p2 = [max_x, min_y]
         p3 = [max_x, max_y]
         p4 = [min_x, max_y]
+        '''
+        # Intiation of polygon point coordinate x&y
+        x = []
+        y = []
+        i = 0
+        # iteration through polygon`s points
+        for index, row in gdf.iterrows():
+            for pt in list(row['geometry'].exterior.coords):
+                xy = Point(pt)
+                x.insert(i, xy.x)
+                y.insert(i, xy.y)
+                ++i
+
+        # getting max and min for both x and y
+        max_x = max(x)
+        max_y = max(y)
+        min_x = min(x)
+        min_y = min(y)
+
+        # Vertcis of the new Rectangular Polygon
+        p1 = [min_x, min_y]
+        p2 = [max_x, min_y]
+        p3 = [max_x, max_y]
+        p4 = [min_x, max_y]
+
+        d_12 = np.sqrt((max_x - min_x) ** 2)
+        d_23 = np.sqrt((max_y - min_y) ** 2)
+        d_xy = [d_12, d_23]
+        ##Distance along x
+        self.X = min(d_xy)  # replaced by
+        ##Distance along y
+        self.Y = max(d_xy)
 
         ####2- Creating new rectangle polygon from extracted points####
         polygon = Polygon([p1, p2, p3, p4, p1])
@@ -597,17 +630,71 @@ class SimulationDTM(SimulationMethod):
         poly_gdf = gpd.GeoDataFrame(data, crs=str(cr))
 
         # create the path of the rectangular area shapefile
-        shpin = newpath(fn, "rectangle")
+        shpin = newpath(fn, "rectangle_area")
 
         # Write the  Rectangle polygon into a shape file
         poly_gdf.to_file(filename=shpin, driver='ESRI Shapefile')
 
         # creating the path of the new Clipped DEM
-        rasout = newpath(rasin, "cut")
+        rasout = newpath(rasin, "cut_DEM")
 
         rect_DEM = gdal.Warp(rasout, rasin, cutlineDSName=shpin, cropToCutline=True)
 
+        ###4-Extract Data From the Clipped DEM###
+
         ds = gdal.Open(rasout)
+        band = ds.GetRasterBand(1)
+        band.SetNoDataValue(np.nan)
+        El = band.ReadAsArray()
+        El = El.astype("float")
+        El[El == -32767] = np.nan
+
+        self.Zo = np.nanmean(El) + self.h  # height of acquisition [m]
+
+        x_0 = ds.GetGeoTransform()[0]  ##the x coordinate of the top left corner
+        y_0 = ds.GetGeoTransform()[3]  ##the y coordinate of the top left corner
+        Dem_res_x = ds.GetGeoTransform()[1]
+        Dem_res_y = ds.GetGeoTransform()[5]
+        ###Creating Grid of point  using DEM as XGrid,yGrid,Elevation###
+        ## Duo to the oriantaion of the polygon the values will be changed
+        if self.X > self.Y:
+            x_f = x_0 + max(El.shape) * Dem_res_x
+            y_f = y_0 + min(El.shape) * Dem_res_y
+
+        else:
+            x_f = x_0 + min(El.shape) * Dem_res_x
+            y_f = y_0 + max(El.shape) * Dem_res_y
+
+        xxGrid = np.arange(x_0, x_f - abs(Dem_res_x), abs(Dem_res_x))
+        yyGrid = np.arange(y_f, y_0 - abs(Dem_res_y), abs(Dem_res_y))
+
+        r_n = xxGrid.shape[0]  # no of rows
+        c_n = yyGrid.shape[0]  # no of coloumns
+
+        ##Reduce the number of points for memory purpose
+
+        if abs(Dem_res_x) and abs(Dem_res_y) < 15:
+            self.xGrid = xxGrid[0:r_n:10]
+            self.yGrid = yyGrid[0:c_n:10]
+            Elev = El[0:r_n:10, 0:c_n:10]
+        else:
+            self.xGrid = (xxGrid[
+                     0:r_n:1])  ##--> further development the user can choose this spacing accourding to the meta data of the dem
+            self.yGrid = (yyGrid[0:c_n:1])
+            Elev = El[0:r_n:1, 0:c_n:1]
+
+        ##Duo to the orientation of the Area
+        if self.X > self.Y:
+            self.XGrid, self.YGrid = np.meshgrid(self.xGrid, self.yGrid)
+        else:
+            self.YGrid, self.XGrid = np.meshgrid(self.yGrid, self.xGrid)
+        ##Name of each point
+        self.ptName = np.arange((self.XGrid.shape[0] * self.XGrid.shape[1])).reshape((self.XGrid.shape[0], self.XGrid.shape[1]))
+        self.n_pt = np.amax(self.ptName) + 1  ### +1 cause the name starts from 0 and it is the no. of ground points
+
+
+        ### compute xsi and eta for each grid point###
+        '''ds = gdal.Open(rasout)
         Elev = ds.GetRasterBand(1).ReadAsArray()
 
         ###4-Extract Data From the Clipped DEM###
@@ -621,10 +708,52 @@ class SimulationDTM(SimulationMethod):
         Dem_res_x = np.abs(ds.GetGeoTransform()[1])  # pixel dimension
         y_0 = ds.GetGeoTransform()[3]
         Dem_res_y = np.abs(ds.GetGeoTransform()[5])  # pixel dimension
+        ###Creating Grid of point  using DEM as XGrid,yGrid,Elevation###
+        ## Duo to the oriantaion of the polygon the values will be changed
+        if self.X > self.Y:
+            x_f = x_0 + max(El.shape) * Dem_res_x
+            y_f = y_0 + min(El.shape) * Dem_res_y
+
+        else:
+            x_f = x_0 + min(El.shape) * Dem_res_x
+            y_f = y_0 + max(El.shape) * Dem_res_y
+
+        xxGrid = np.arange(x_0, x_f - abs(Dem_res_x), abs(Dem_res_x))
+        yyGrid = np.arange(y_f, y_0 - abs(Dem_res_y), abs(Dem_res_y))
+
+        r_n = xxGrid.shape[0]  # no of rows
+        c_n = yyGrid.shape[0]  # no of coloumns
+
+        ##Reduce the number of points for memory purpose
+
+        if abs(Dem_res_x) and abs(Dem_res_y) < 15:
+            self.xGrid = xxGrid[0:r_n:10]
+            self.yGrid = yyGrid[0:c_n:10]
+            Elev = El[0:r_n:10, 0:c_n:10]
+        else:
+            self.xGrid = (xxGrid[
+                     0:r_n:1])  ##--> further development the user can choose this spacing accourding to the meta data of the dem
+            self.yGrid = (yyGrid[0:c_n:1])
+            Elev = El[0:r_n:1, 0:c_n:1]
+        self.h = Zo - Elev
+        ##Duo to the orientation of the Area
+        if self.X > self.Y:
+            self.XGrid, self.YGrid = np.meshgrid(self.xGrid, self.yGrid)
+        else:
+            self.YGrid, self.XGrid = np.meshgrid(self.yGrid, self.xGrid)
+        ##Name of each point
+        #self.ptName = np.arange(len(self.XGrid[0]) * len(self.YGrid)).reshape((len(self.YGrid), len(self.XGrid[0])),
+         #                                                                     order='F')
+        self.ptName = np.arange((self.XGrid.shape[0] * self.XGrid.shape[1])).reshape((self.XGrid.shape[0], self.XGrid.shape[1]))
+        print(self.ptName.shape)
+        self.n_pt = np.amax(self.ptName) + 1  ### +1 cause the name starts from 0 and it is the no. of ground points
+
         self.X = Dem_res_x * X
         self.Y = Dem_res_y * Y
+        '''
         self.nstrip_y = np.ceil(self.Y / self.b)  # number of strips in y
         self.nstrip_x = np.ceil(self.X / self.interaxie)  # number of strips in x
+
 
         flpath_length = self.X + self.Y * (self.nstrip_x + 1)  # flight path for error checking
 
@@ -645,13 +774,17 @@ class SimulationDTM(SimulationMethod):
         self.max_distance = self.UAS_v * 60 * self.UAS_v_min  # max distance covered [m]
         self.max_distance_proj = self.nstrip_x * self.b * self.nstrip_y + self.b * self.interaxie  # max distance in project [m]
 
+        self.num_images = self.nstrip_y * self.nstrip_x  # total expected number of images (in both directions)
+
         # adapt the estimated parameters to uniformly cover the area
         self.b_real = (self.Y) / self.nstrip_y  # real baseline
         self.i_real = (self.X) / self.nstrip_x  # real interaxie
         self.Rl_real = 1 - self.b_real / self.H  # real longitudinal overlapping
         self.Rt_real = 1 - self.i_real / self.W  # real transversal overlapping
+        self.nstrip_x = self.nstrip_x.astype(np.int64)
+        self.nstrip_y = self.nstrip_y.astype(np.int64)
 
-        # determine the position of camera acquisition
+        '''# determine the position of camera acquisition
         # moving origin of the acqusition to the bottom left corner of DEM
         self.xo = np.arange(0 + self.i_real/2, self.X, self.i_real)   # [m]
         self.yo = np.arange(0,  self.Y - self.b_real/2, self.b_real)  # [m]
@@ -679,13 +812,17 @@ class SimulationDTM(SimulationMethod):
         # define the grid of ground points -------------------------------------------
         self.xGrid = np.arange(0, self.X, Dem_res_x * delta)  # vector of x
         self.yGrid = np.arange(0, self.Y, Dem_res_y * delta)  # vector of y coordinates
-        self.XGrid, self.YGrid = np.meshgrid(self.xGrid, self.yGrid)  # matrices of all coordinates (couples x and y)
-        # index ("name") of each point (to be used in the simulation)
-        self.ptName = np.arange(len(self.XGrid[0]) * len(self.YGrid)).reshape((len(self.YGrid), len(self.XGrid[0])), order='F')
+        self.XGrid, self.YGrid = np.meshgrid(self.xGrid, self.yGrid)  # matrices of all coordinates (couples x and y)'''
 
         # overlapping map ------------------------------------------------------------
         # map of the number of images from which each point is seen
         # overlapping in y direction (vector) - longitudinal
+
+        self.xo = min_x + np.arange(self.i_real / 2, self.X, self.i_real)  # [m]###--> to be change
+        self.yo = min_y + np.arange(self.b_real / 2, self.Y, self.b_real)  # [m]###--> to be change
+        self.Xo, self.Yo = np.meshgrid(self.xo, self.yo)
+        self.flpath = np.zeros((self.nstrip_x * self.nstrip_y, 2))  # [Xo, Yo]
+
         over_y = np.zeros(len(self.yGrid))
         for i in range(self.nstrip_y):
             for j, val in enumerate(self.yGrid):
@@ -701,3 +838,35 @@ class SimulationDTM(SimulationMethod):
 
         # determine the overlapping maps
         self.Over_x, self.Over_y = np.meshgrid(over_x, over_y)
+
+        self.X = self.X - x_0
+        self.Y = self.Y - y_0
+
+    def algorithm(self):
+        '''
+            Simulation implementation.
+            This function will return the maximum sigma z in the error map. This value will be used in the automatic
+            generation procedure to select the best values of overlapping.
+            Since the DTM algorithm is still a simulation method, this function will be used also by Simulation using
+            DTM.
+        '''
+        self.simulate_observation()
+        A = self.calculate_A()
+
+        # Normal matrix N
+        A_transpose = A.transpose()
+        # observation vector yo
+        yo = np.concatenate([self.xsi, self.eta])
+
+        # Find the least-squares solution to a large, sparse, linear system of equations.
+        sol = scipy.sparse.linalg.lsqr(A, yo)[0]
+
+        ####computing inverse of N
+        ATL = A_transpose @ yo  # --->AT * L
+        ATL_inv = np.linalg.pinv([ATL]).reshape(-1)  # --->(AT * L)-1
+
+        invN = np.tensordot(ATL_inv, sol, axes=0)  # --->(AT * L)-1*sol
+
+        self.generate_error_map(A=A, x=sol, yo=yo, invN=invN)
+
+        return np.max(self.sz2)  # empirical sigma z
